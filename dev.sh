@@ -22,6 +22,31 @@ fi
 
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 
+is_port_free() {
+  local host="$1" port="$2"
+  if command_exists lsof; then
+    ! lsof -iTCP:"$port" -sTCP:LISTEN -Pn | grep -q "LISTEN"
+  elif command_exists nc; then
+    ! nc -z "$host" "$port" >/dev/null 2>&1
+  else
+    # Best effort if neither tool is available
+    return 0
+  fi
+}
+
+choose_free_port() {
+  local start_port="$1" host="$2" max_tries=50
+  local try_port="$start_port"
+  for _ in $(seq 0 "$max_tries"); do
+    if is_port_free "$host" "$try_port"; then
+      echo "$try_port"
+      return 0
+    fi
+    try_port=$((try_port + 1))
+  done
+  echo "$start_port"
+}
+
 open_url() {
   local url="http://$HOST:$PORT"
   if [[ "$OPEN_BROWSER" == "1" ]]; then
@@ -39,6 +64,8 @@ start_and_wait() {
   open_url
   wait "$pid"
 }
+
+PORT="$(choose_free_port "$PORT" "$HOST")"
 
 echo "Serving directory: $SCRIPT_DIR"
 echo "Host: $HOST  Port: $PORT"
