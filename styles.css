@@ -1,0 +1,91 @@
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  height: 100vh;
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: #0b1220;
+  color: #e2e8f0;
+  border-right: 1px solid #1e293b;
+}
+.brand {
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.4px;
+}
+.nav {
+  display: flex;
+  flex-direction: column;
+}
+.nav-item {
+  color: #94a3b8;
+  text-decoration: none;
+  padding: 10px 8px;
+  border-radius: 8px;
+}
+.nav-item:hover, .nav-item.active {
+  color: #e2e8f0;
+  background: #111827;
+}
+.footer {
+  margin-top: auto;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.main-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffffcc;
+  backdrop-filter: blur(6px);
+}
+.main-header h1 {
+  margin: 0 0 6px 0;
+  font-size: 22px;
+}
+.main-header p {
+  margin: 0;
+  color: #475569;
+}
+
+.canvas-container {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The canvas is sized via JS to match devicePixelRatio for crisp rendering */
+#scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 220px 1fr; }
+}
+@media (max-width: 700px) {
+  .app { grid-template-columns: 1fr; }
+  .side-panel { display: none; }
+}
+

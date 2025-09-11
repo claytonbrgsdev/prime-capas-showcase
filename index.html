@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prime Capas Showcase</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="side-panel">
+      <div class="brand">Prime Capas</div>
+      <nav class="nav">
+        <a href="#" class="nav-item active">Home</a>
+        <a href="#" class="nav-item">Gallery</a>
+        <a href="#" class="nav-item">About</a>
+      </nav>
+      <footer class="footer">© <span id="year"></span> Prime Capas</footer>
+    </aside>
+    <main class="main">
+      <header class="main-header">
+        <h1>Showcase</h1>
+        <p>Three.js demo in pure HTML/CSS/JS</p>
+      </header>
+      <section class="canvas-container">
+        <!-- Three.js will render into this container -->
+        <canvas id="scene"></canvas>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+  <script src="main.js"></script>
+</body>
+<!--
+  Pure HTML/CSS/JS layout with a side panel and main content.
+  Three.js scene is initialized in main.js and renders into #scene canvas.
+-->
+</html>
+
