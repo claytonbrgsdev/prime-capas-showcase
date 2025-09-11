@@ -8,6 +8,12 @@ window.SceneGalpao = (function () {
     const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
     camera.position.set(2.5, 1.8, 3.2);
 
+    // Orbit controls for debugging
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.target.set(0, 0, 0);
+
     const light1 = new THREE.DirectionalLight(0xffffff, 1.1);
     light1.position.set(3, 4, 5);
     scene.add(light1);
@@ -44,6 +50,10 @@ window.SceneGalpao = (function () {
           const distance = (radius / Math.tan(fov / 2)) * 1.3; // padding factor
           camera.position.set(center.x + distance, center.y + radius * 0.5, center.z + distance);
           camera.lookAt(center);
+
+          // Update orbit controls target to scenario center
+          controls.target.copy(center);
+          controls.update();
         },
         undefined,
         function (err) {
@@ -56,6 +66,7 @@ window.SceneGalpao = (function () {
     function update() {
       cube.rotation.x += 0.01;
       cube.rotation.y += 0.0125;
+      controls.update();
     }
 
     function render() {
@@ -70,6 +81,7 @@ window.SceneGalpao = (function () {
       if (scenarioRoot) {
         scene.remove(scenarioRoot);
       }
+      controls.dispose && controls.dispose();
     }
 
     return { update, render, dispose };
