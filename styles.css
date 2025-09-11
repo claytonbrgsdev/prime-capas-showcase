@@ -52,20 +52,7 @@ body {
   flex-direction: column;
   min-width: 0;
 }
-.main-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
-  background: #ffffffcc;
-  backdrop-filter: blur(6px);
-}
-.main-header h1 {
-  margin: 0 0 6px 0;
-  font-size: 22px;
-}
-.main-header p {
-  margin: 0;
-  color: #475569;
-}
+/* header removed: center content only shows canvas */
 
 .canvas-container {
   position: relative;
