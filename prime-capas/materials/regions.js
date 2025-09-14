@@ -276,7 +276,7 @@ function fitTextureToMaterialGroups(mesh, materialIndex, texture, opts = {}) {
 // Calculate the actual center of a fitted texture in UV space
 function getTextureUVCenter(texture) {
   if (!texture || !texture.userData || !texture.userData.uvBounds) {
-    return { x: 0.3, y: 0.3 }; // fallback to middle
+    return { x: 0.5, y: 0.5 }; // fallback to middle
   }
   
   const bounds = texture.userData.uvBounds;
