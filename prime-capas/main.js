@@ -46,6 +46,22 @@ function logosLogTexState(idx, tex, extras={}) {
   LOGOS_LOG('state', 'texture', { idx, q, rot:+(tex?.rotation||0).toFixed?.(3), rep:`(${+(rep.x||0).toFixed(3)},${+(rep.y||0).toFixed(3)})`, off:`(${+(off.x||0).toFixed(3)},${+(off.y||0).toFixed(3)})`, ctr:`(${+(ctr.x||0).toFixed(3)},${+(ctr.y||0).toFixed(3)})`, uvCtr:`(${+(ub.centerU||0).toFixed(3)},${+(ub.centerV||0).toFixed(3)})`, ...extras });
 }
 
+// ===== LOGOS Rotation Management =====
+function logosRadToQ(rad){ const t=Math.PI*2; const r=((rad%t)+t)%t; return Math.round(r/(Math.PI/2))%4; }
+
+function logosSetRotationQ(modelRoot, idx, targetQ){
+  const list = window.__logos_listInstances ? window.__logos_listInstances(modelRoot) : [];
+  const it = list[idx]; if (!it) return;
+  const sig = logosInstanceSignature(it);
+  const mat = it.material; const tex = mat?.map; if (!tex) return;
+  const currentQ = logosRadToQ(tex.rotation||0);
+  const delta = ((targetQ - currentQ)%4 + 4)%4;
+  LOGOS_LOG('rotate', `idx=${idx} fromQ=${currentQ} -> toQ=${targetQ} (Δ=${delta}) baseRad=${(tex.rotation||0).toFixed(3)}`);
+  if (delta) rotateRoleInstanceExt(modelRoot, 'logos', idx, delta);
+  try { localStorage.setItem('logos:pref:'+sig, JSON.stringify({ rotationQ: targetQ })); LOGOS_LOG('persist','save',{sig,rotationQ:targetQ}); } catch(_){}
+  logosLogTexState(idx, it.material?.map);
+}
+
 (function () {
   // ===== App State =====
   /** @type {THREE.WebGLRenderer} */
