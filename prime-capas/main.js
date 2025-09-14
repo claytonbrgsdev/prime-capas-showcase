@@ -13,186 +13,7 @@ import { initializeCamera, enforceCameraDistanceClamp as clampCameraDistance, up
 import { createCinematicController } from './camera_cinematic.js';
 import { applyColorToModel as applyColorToModelExt, applyColorToSpecificTarget as applyColorToSpecificTargetExt, disableMapForSpecificTarget as disableMapForSpecificTargetExt, applyLineColor as applyLineColorExt } from './materials/core.js';
 import { removeDefaultTextureMapsFromModel as removeDefaultTextureMapsFromModelExt } from './materials/baked.js';
-import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialNames as getAllMaterialNamesExt, setMaterialRoleMatchers as setMaterialRoleMatchersExt, applyTextureToRole as applyTextureToRoleExt, applyColorToRole as applyColorToRoleExt, getRoleInstanceCount as getRoleInstanceCountExt, setRoleInstanceVisible as setRoleInstanceVisibleExt, rotateRoleInstance as rotateRoleInstanceExt, listRoleInstances } from './materials/regions.js';
-
-// ===== LOGOS Debug System =====
-function LOGOS_LOG(type, msg, data) {
-  try { if (localStorage.getItem('LOGOS_DEBUG') !== '1') return; } catch(_) { return; }
-  const tag = `[LOGOS][${type}]`;
-  if (data !== undefined) console.log(tag, msg, data); else console.log(tag, msg);
-}
-
-// Expose debug helper in dev environment
-try { window.LOGOS_SET_DEBUG = (v) => localStorage.setItem('LOGOS_DEBUG', v ? '1' : '0'); } catch(_) {}
-
-// Expose listRoleInstances for LOGOS functions
-try { window.__logos_listInstances = (modelRoot) => listRoleInstances(modelRoot, 'logos'); } catch(_) {}
-
-// ===== LOGOS Instance Management =====
-function logosInstanceSignature(item) {
-  const mesh = item.mesh; const mi = item.materialIndex; const mat = item.material;
-  return `${mesh?.name || mesh?.id}#${mi}#${mat?.name || 'mat'}`;
-}
-
-function logosLogInstanceMap(modelRoot) {
-  const list = window.__logos_listInstances ? window.__logos_listInstances(modelRoot) : [];
-  const rows = list.map((it, idx) => ({ idx, sig: logosInstanceSignature(it), meshId: it.mesh.id, mesh: it.mesh.name, materialIndex: it.materialIndex, material: it.material?.name }));
-  LOGOS_LOG('map', 'instances'); console.table(rows);
-  try { localStorage.setItem('logos:map:v1', JSON.stringify(rows)); LOGOS_LOG('map', 'saved logos:map:v1'); } catch(_) {}
-  return rows;
-}
-
-function logosLogTexState(idx, tex, extras={}) {
-  const rep = tex?.repeat || {x:NaN,y:NaN}; const off = tex?.offset || {x:NaN,y:NaN}; const ctr = tex?.center || {x:NaN,y:NaN};
-  const ub = (tex?.userData && tex.userData.uvBounds) || {};
-  const q = (()=>{ const r = tex?.rotation || 0; const pi2 = Math.PI*2; const nr = ((r%pi2)+pi2)%pi2; return Math.round(nr/(Math.PI/2))%4; })();
-  LOGOS_LOG('state', 'texture', { idx, q, rot:+(tex?.rotation||0).toFixed?.(3), rep:`(${+(rep.x||0).toFixed(3)},${+(rep.y||0).toFixed(3)})`, off:`(${+(off.x||0).toFixed(3)},${+(off.y||0).toFixed(3)})`, ctr:`(${+(ctr.x||0).toFixed(3)},${+(ctr.y||0).toFixed(3)})`, uvCtr:`(${+(ub.centerU||0).toFixed(3)},${+(ub.centerV||0).toFixed(3)})`, ...extras });
-}
-
-// ===== LOGOS Rotation Management =====
-function logosRadToQ(rad){ const t=Math.PI*2; const r=((rad%t)+t)%t; return Math.round(r/(Math.PI/2))%4; }
-
-function logosSetRotationQ(modelRoot, idx, targetQ){
-  const list = window.__logos_listInstances ? window.__logos_listInstances(modelRoot) : [];
-  const it = list[idx]; if (!it) return;
-  const sig = logosInstanceSignature(it);
-  const mat = it.material; const tex = mat?.map; if (!tex) return;
-  const currentQ = logosRadToQ(tex.rotation||0);
-  const delta = ((targetQ - currentQ)%4 + 4)%4;
-  LOGOS_LOG('rotate', `idx=${idx} fromQ=${currentQ} -> toQ=${targetQ} (Δ=${delta}) baseRad=${(tex.rotation||0).toFixed(3)}`);
-  if (delta) rotateRoleInstanceExt(modelRoot, 'logos', idx, delta);
-  try { localStorage.setItem('logos:pref:'+sig, JSON.stringify({ rotationQ: targetQ })); LOGOS_LOG('persist','save',{sig,rotationQ:targetQ}); } catch(_){}
-  logosLogTexState(idx, it.material?.map);
-}
-
-// ===== LOGOS Post-Upload Reapplication =====
-function applyDefaultsForLogos(modelRoot){
-  const list = window.__logos_listInstances ? window.__logos_listInstances(modelRoot) : [];
-  list.forEach((it, idx) => {
-    const sig = logosInstanceSignature(it);
-    let pref = null; try { pref = JSON.parse(localStorage.getItem('logos:pref:'+sig) || 'null'); } catch(_){}
-    const tex = it.material?.map; if (!tex) return;
-    if (pref && Number.isFinite(pref.rotationQ)) {
-      const current = logosRadToQ(tex.rotation||0);
-      const delta = ((pref.rotationQ - current)%4 + 4)%4;
-      if (delta) rotateRoleInstanceExt(modelRoot, 'logos', idx, delta);
-    }
-    if (pref && typeof pref.flipY === 'number') { tex.flipY = !!pref.flipY; tex.needsUpdate = true; }
-    // padPercent opcional (se usar refit custom)
-    logosLogTexState(idx, tex, { loadedPref: !!pref });
-  });
-}
-
-// ===== LOGOS QA Helpers (dev-only) =====
-function __logos_list(modelRoot){ return window.__logos_listInstances ? window.__logos_listInstances(modelRoot) : []; }
-function __logos_sig(it){ return (typeof logosInstanceSignature === 'function') ? logosInstanceSignature(it) : `${it.mesh?.name||it.mesh?.id}#${it.materialIndex}#${it.material?.name||'mat'}`; }
-function __logos_qFromRad(rad){ const t=Math.PI*2; const r=((rad%t)+t)%t; return Math.round(r/(Math.PI/2))%4; }
-
-function LOGOS_QA_map(){
-  const modelRoot = window.__logos_modelRoot;
-  if (!modelRoot) { console.error('❌ modelRoot não disponível. Aguarde o modelo carregar.'); return []; }
-  const rows = logosLogInstanceMap ? logosLogInstanceMap(modelRoot) : [];
-  LOGOS_LOG && LOGOS_LOG('qa','map captured', {count: rows.length});
-  return rows;
-}
-
-function LOGOS_QA_saveFromCurrent(){
-  const modelRoot = window.__logos_modelRoot;
-  if (!modelRoot) { console.error('❌ modelRoot não disponível.'); return false; }
-  const list = __logos_list(modelRoot);
-  const rows = JSON.parse(localStorage.getItem('logos:map:v1') || '[]');
-  rows.forEach((r) => {
-    const it = list[r.idx]; const tex = it?.material?.map;
-    if (!tex) return;
-    const q = __logos_qFromRad(tex.rotation || 0);
-    localStorage.setItem('logos:pref:'+r.sig, JSON.stringify({ rotationQ: q }));
-    LOGOS_LOG && LOGOS_LOG('persist','save-from-current', { sig: r.sig, rotationQ: q });
-  });
-  return true;
-}
-
-/** Define preferências por IDX rapidamente: LOGOS_QA_setPrefsByIdx({0:1,1:2,2:0,3:3}) */
-function LOGOS_QA_setPrefsByIdx(mapping){
-  const rows = JSON.parse(localStorage.getItem('logos:map:v1') || '[]');
-  rows.forEach((r) => {
-    const q = mapping[r.idx];
-    if (Number.isInteger(q)) {
-      localStorage.setItem('logos:pref:'+r.sig, JSON.stringify({ rotationQ: q }));
-      LOGOS_LOG && LOGOS_LOG('persist','write', { sig: r.sig, rotationQ: q });
-    }
-  });
-  return true;
-}
-
-/** Reaplica prefs imediatamente (útil para QA manual) */
-function LOGOS_QA_reapply(){ 
-  const modelRoot = window.__logos_modelRoot;
-  if (!modelRoot) { console.error('❌ modelRoot não disponível.'); return false; }
-  try { applyDefaultsForLogos(modelRoot); LOGOS_LOG && LOGOS_LOG('qa','reapply-called'); } catch(_) {} return true; 
-}
-
-/** Verificação rígida: q atual vs esperado + centro UV vs center do texture */
-function LOGOS_QA_verify(tolerance=1e-3){
-  const modelRoot = window.__logos_modelRoot;
-  if (!modelRoot) { console.error('❌ modelRoot não disponível.'); return {pass:0, fail:0, total:0, details:[]}; }
-  const list = __logos_list(modelRoot);
-  const rows = JSON.parse(localStorage.getItem('logos:map:v1') || '[]');
-  const out = [];
-  let pass = 0, fail = 0;
-
-  rows.forEach((r) => {
-    const it = list[r.idx]; const tex = it?.material?.map;
-    if (!tex) { out.push({ idx:r.idx, sig:r.sig, ok:false, reason:'no texture' }); fail++; return; }
-
-    // q atual
-    const qNow = __logos_qFromRad(tex.rotation || 0);
-
-    // q esperado
-    let pref = null; try { pref = JSON.parse(localStorage.getItem('logos:pref:'+r.sig) || 'null'); } catch(_) {}
-    const qExp = (pref && Number.isInteger(pref.rotationQ)) ? pref.rotationQ : null;
-
-    // centros
-    const ctr = tex.center || {x:NaN,y:NaN};
-    const ub = tex.userData?.uvBounds || {};
-    const uvCx = (ub.centerU != null) ? ub.centerU : NaN;
-    const uvCy = (ub.centerV != null) ? ub.centerV : NaN;
-    const cdx = Math.abs((ctr.x||0) - (uvCx||0));
-    const cdy = Math.abs((ctr.y||0) - (uvCy||0));
-    const centerOK = (isFinite(cdx) && isFinite(cdy) && cdx <= tolerance && cdy <= tolerance);
-
-    const okQ = (qExp == null) ? true : (qNow === qExp);
-    const ok = !!okQ && !!centerOK;
-
-    out.push({
-      idx: r.idx,
-      sig: r.sig,
-      q_now: qNow,
-      q_exp: qExp,
-      center_dx: +cdx.toFixed(4),
-      center_dy: +cdy.toFixed(4),
-      okQ: !!okQ,
-      centerOK: !!centerOK,
-      ok
-    });
-    ok ? pass++ : fail++;
-  });
-
-  LOGOS_LOG && LOGOS_LOG('verify','results'); console.table(out);
-  LOGOS_LOG && LOGOS_LOG('verify','summary', { pass, fail, total: pass+fail, tolerance });
-  return { pass, fail, total: pass+fail, details: out };
-}
-
-// Expõe no escopo global (dev)
-try {
-  window.LOGOS_QA = {
-    map: LOGOS_QA_map,
-    saveFromCurrent: LOGOS_QA_saveFromCurrent,
-    setPrefsByIdx: LOGOS_QA_setPrefsByIdx,
-    reapply: LOGOS_QA_reapply,
-    verify: LOGOS_QA_verify
-  };
-  LOGOS_LOG && LOGOS_LOG('qa','helpers-ready');
-} catch(_) {}
+import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialNames as getAllMaterialNamesExt, setMaterialRoleMatchers as setMaterialRoleMatchersExt, applyTextureToRole as applyTextureToRoleExt, applyColorToRole as applyColorToRoleExt, getRoleInstanceCount as getRoleInstanceCountExt, setRoleInstanceVisible as setRoleInstanceVisibleExt, rotateRoleInstance as rotateRoleInstanceExt, setLogoTextureRotation, getLogoTextureRotation, resetLogoTextureRotation } from './materials/regions.js';
 
 (function () {
   // ===== App State =====
@@ -259,8 +80,13 @@ try {
   let logoInst0Visible = null, logoInst1Visible = null, logoInst2Visible = null, logoInst3Visible = null;
   /** @type {HTMLButtonElement | null} */
   let logoInst0RotCCW = null, logoInst0RotCW = null, logoInst1RotCCW = null, logoInst1RotCW = null, logoInst2RotCCW = null, logoInst2RotCW = null, logoInst3RotCCW = null, logoInst3RotCW = null;
-  /** @type {HTMLButtonElement | null} */
-  let logoInst0Reset = null, logoInst1Reset = null, logoInst2Reset = null, logoInst3Reset = null;
+  
+  // Texture rotation sliders and value displays for each instance
+  /** @type {HTMLInputElement | null} */
+  let logoInst0RotSlider = null, logoInst1RotSlider = null, logoInst2RotSlider = null, logoInst3RotSlider = null;
+  /** @type {HTMLSpanElement | null} */
+  let logoInst0RotValue = null, logoInst1RotValue = null, logoInst2RotValue = null, logoInst3RotValue = null;
+  
   // Expose refresher so we can call it after model load
   let refreshLogosControlsAvailability = null;
   
@@ -756,10 +582,18 @@ try {
     logoInst2RotCW  = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst2RotCW'));
     logoInst3RotCCW = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst3RotCCW'));
     logoInst3RotCW  = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst3RotCW'));
-    logoInst0Reset = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst0Reset'));
-    logoInst1Reset = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst1Reset'));
-    logoInst2Reset = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst2Reset'));
-    logoInst3Reset = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst3Reset'));
+
+    // Texture rotation sliders
+    logoInst0RotSlider = /** @type {HTMLInputElement} */ (document.getElementById('logoInst0Rot'));
+    logoInst1RotSlider = /** @type {HTMLInputElement} */ (document.getElementById('logoInst1Rot'));
+    logoInst2RotSlider = /** @type {HTMLInputElement} */ (document.getElementById('logoInst2Rot'));
+    logoInst3RotSlider = /** @type {HTMLInputElement} */ (document.getElementById('logoInst3Rot'));
+
+    // Value display spans
+    logoInst0RotValue = /** @type {HTMLSpanElement} */ (document.getElementById('logoInst0RotValue'));
+    logoInst1RotValue = /** @type {HTMLSpanElement} */ (document.getElementById('logoInst1RotValue'));
+    logoInst2RotValue = /** @type {HTMLSpanElement} */ (document.getElementById('logoInst2RotValue'));
+    logoInst3RotValue = /** @type {HTMLSpanElement} */ (document.getElementById('logoInst3RotValue'));
     const initialModelUrl = (modelSelectEl && modelSelectEl.value) || './assets/models/kosha4/teste14.glb';
     console.log('[loader] loading', initialModelUrl);
     loadGltfModel(initialModelUrl, (p) => overlay.setProgress(p), () => overlay.hide());
@@ -800,14 +634,30 @@ try {
         const count = getRoleInstanceCountExt(modelRoot, 'logos');
         if (!count || count <= 0) return; // don't disable controls before model is ready
         const setEnabled = (el, on) => { if (!el) return; el.disabled = !on; };
-        setEnabled(logoInst0Visible, count > 0); setEnabled(logoInst0RotCCW, count > 0); setEnabled(logoInst0RotCW, count > 0); setEnabled(logoInst0Reset, count > 0);
-        setEnabled(logoInst1Visible, count > 1); setEnabled(logoInst1RotCCW, count > 1); setEnabled(logoInst1RotCW, count > 1); setEnabled(logoInst1Reset, count > 1);
-        setEnabled(logoInst2Visible, count > 2); setEnabled(logoInst2RotCCW, count > 2); setEnabled(logoInst2RotCW, count > 2); setEnabled(logoInst2Reset, count > 2);
-        setEnabled(logoInst3Visible, count > 3); setEnabled(logoInst3RotCCW, count > 3); setEnabled(logoInst3RotCW, count > 3); setEnabled(logoInst3Reset, count > 3);
+        
+        // Instance 0 controls
+        setEnabled(logoInst0Visible, count > 0);
+        setEnabled(logoInst0RotCCW, count > 0); setEnabled(logoInst0RotCW, count > 0);
+        setEnabled(logoInst0RotSlider, count > 0);
+        
+        // Instance 1 controls
+        setEnabled(logoInst1Visible, count > 1);
+        setEnabled(logoInst1RotCCW, count > 1); setEnabled(logoInst1RotCW, count > 1);
+        setEnabled(logoInst1RotSlider, count > 1);
+        
+        // Instance 2 controls
+        setEnabled(logoInst2Visible, count > 2);
+        setEnabled(logoInst2RotCCW, count > 2); setEnabled(logoInst2RotCW, count > 2);
+        setEnabled(logoInst2RotSlider, count > 2);
+        
+        // Instance 3 controls
+        setEnabled(logoInst3Visible, count > 3);
+        setEnabled(logoInst3RotCCW, count > 3); setEnabled(logoInst3RotCW, count > 3);
+        setEnabled(logoInst3RotSlider, count > 3);
       } catch (_) {}
     };
 
-    const bindLogoInstanceControls = (idx, cbVisible, btnCCW, btnCW, btnReset) => {
+    const bindLogoInstanceControls = (idx, cbVisible, btnCCW, btnCW, rotSlider, rotValue) => {
       // Only rotate the specific logos instance, not the side roles which may be interfering
       const setVisible = (on) => {
         setRoleInstanceVisibleExt(modelRoot, 'logos', idx, !!on);
@@ -815,18 +665,52 @@ try {
       const rotate = (qt) => {
         rotateRoleInstanceExt(modelRoot, 'logos', idx, qt);
       };
+      
       if (cbVisible) cbVisible.addEventListener('change', () => setVisible(!!cbVisible.checked));
-      // Use 90° rotation steps (quarter-turns) as per LOGOS methodology
-      if (btnCCW) btnCCW.addEventListener('click', () => rotate(-1));
-      if (btnCW)  btnCW.addEventListener('click',  () => rotate(+1));
-      if (btnReset) btnReset.addEventListener('click', () => logosSetRotationQ(modelRoot, idx, 0));
+      // Use 180° rotation steps to avoid UV-fit distortions that appear at 90°
+      if (btnCCW) btnCCW.addEventListener('click', () => rotate(-2));
+      if (btnCW)  btnCW.addEventListener('click',  () => rotate(+2));
+
+      // Texture rotation slider event handler
+      if (rotSlider && rotValue) {
+        rotSlider.addEventListener('input', () => {
+          const degrees = parseInt(rotSlider.value, 10);
+          rotValue.textContent = `${degrees}°`;
+          setLogoTextureRotation(modelRoot, idx, degrees);
+        });
+        
+        // Initialize display
+        rotValue.textContent = `${rotSlider.value}°`;
+      }
     };
-    bindLogoInstanceControls(0, logoInst0Visible, logoInst0RotCCW, logoInst0RotCW, logoInst0Reset);
-    bindLogoInstanceControls(1, logoInst1Visible, logoInst1RotCCW, logoInst1RotCW, logoInst1Reset);
-    bindLogoInstanceControls(2, logoInst2Visible, logoInst2RotCCW, logoInst2RotCW, logoInst2Reset);
-    bindLogoInstanceControls(3, logoInst3Visible, logoInst3RotCCW, logoInst3RotCW, logoInst3Reset);
+    bindLogoInstanceControls(0, logoInst0Visible, logoInst0RotCCW, logoInst0RotCW, logoInst0RotSlider, logoInst0RotValue);
+    bindLogoInstanceControls(1, logoInst1Visible, logoInst1RotCCW, logoInst1RotCW, logoInst1RotSlider, logoInst1RotValue);
+    bindLogoInstanceControls(2, logoInst2Visible, logoInst2RotCCW, logoInst2RotCW, logoInst2RotSlider, logoInst2RotValue);
+    bindLogoInstanceControls(3, logoInst3Visible, logoInst3RotCCW, logoInst3RotCW, logoInst3RotSlider, logoInst3RotValue);
 
     
+    // Reapply saved texture rotations after PNG upload
+    function reapplyLogoRotations() {
+      if (!modelRoot) return;
+      try {
+        // Reapply texture rotations for all instances
+        for (let i = 0; i < 4; i++) {
+          const savedRotation = getLogoTextureRotation(modelRoot, i);
+          if (savedRotation !== 0) {
+            setLogoTextureRotation(modelRoot, i, savedRotation);
+            console.log(`[LOGOS] Reapplied rotation ${savedRotation}° to instance ${i}`);
+          }
+        }
+        // Update UI sliders to reflect current values
+        if (logoInst0RotSlider) { logoInst0RotSlider.value = String(getLogoTextureRotation(modelRoot, 0)); logoInst0RotValue.textContent = `${logoInst0RotSlider.value}°`; }
+        if (logoInst1RotSlider) { logoInst1RotSlider.value = String(getLogoTextureRotation(modelRoot, 1)); logoInst1RotValue.textContent = `${logoInst1RotSlider.value}°`; }
+        if (logoInst2RotSlider) { logoInst2RotSlider.value = String(getLogoTextureRotation(modelRoot, 2)); logoInst2RotValue.textContent = `${logoInst2RotSlider.value}°`; }
+        if (logoInst3RotSlider) { logoInst3RotSlider.value = String(getLogoTextureRotation(modelRoot, 3)); logoInst3RotValue.textContent = `${logoInst3RotSlider.value}°`; }
+      } catch (e) {
+        console.warn('[LOGOS] Error reapplying rotations:', e);
+      }
+    }
+
     // PNG upload handler: apply to LOGOS role (and also front/back/lat roles for backward compat)
     if (pngUploadEl) {
       pngUploadEl.addEventListener('change', async () => {
@@ -839,8 +723,9 @@ try {
           applyTextureToRole('tras', url, { anisotropy: 8, flipY: false });
           applyTextureToRole('lateral1', url, { anisotropy: 8, flipY: false });
           applyTextureToRole('lateral2', url, { anisotropy: 8, flipY: false });
-          // LOGOS: Reagendar reaplicação de defaults após TextureLoader
-          setTimeout(() => { try { applyDefaultsForLogos(modelRoot); LOGOS_LOG && LOGOS_LOG('persist','reapply-after-upload'); } catch(_){} }, 50);
+          
+          // Reapply saved rotations after texture is loaded
+          setTimeout(() => reapplyLogoRotations(), 100);
         } finally {
           try { pngUploadEl.value = ''; } catch (_) {}
         }
@@ -983,12 +868,6 @@ try {
         } catch (_) {}
         try { refreshLogosControlsAvailability && refreshLogosControlsAvailability(); } catch (_) {}
         
-        // LOGOS: Log instance mapping após modelo carregado/ready
-        try { logosLogInstanceMap(modelRoot); } catch (_) {}
-        
-        // LOGOS: Bootstrap - aplicar defaults após primeiro carregamento
-        setTimeout(() => { try { applyDefaultsForLogos(modelRoot); } catch(_){} }, 100);
-        
         frameObject3D(modelRoot);
         
         onProgress?.(85);
@@ -1100,9 +979,6 @@ try {
 
     scene.add(wrapper);
     modelRoot = wrapper;
-    
-    // LOGOS QA: Expor modelRoot globalmente para helpers QA
-    try { window.__logos_modelRoot = modelRoot; } catch(_) {}
 
     updateFloorUnderModel();
     // Provisional placement to reduce visible snap when scenario loads

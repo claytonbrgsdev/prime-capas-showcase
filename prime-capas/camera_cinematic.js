@@ -1,0 +1,314 @@
+import * as THREE from 'three';
+
+/**
+ * Cinematic camera controller.
+ * Handles time-based orbital motion, FOV pulsing, and optional DOF focus updates.
+ */
+export function createCinematicController(camera, controls) {
+  let enabled = false;
+  let timeSeconds = 0;
+  /** @type {import('three/addons/postprocessing/BokehPass.js').BokehPass | null} */
+  let bokehPass = null;
+
+  // Orbit parameters (defaults chosen for a slow, steady orbit)
+  let orbitSpeedRadPerSec = 0.05; // ~2.86 deg/s
+  let radiusFactor = 1.2; // distance relative to subject radius
+  let elevationDeg = 40; // camera elevation in degrees
+  let elevationSwayDeg = 0; // set > 0 to add subtle vertical sway
+
+  // FOV pulsing (disabled by default for a calmer look)
+  let fovPulseEnabled = false;
+  let baseFovDeg = 55;
+  let fovPulseAmplitudeDeg = 0; // set > 0 to enable subtle pulsing
+
+  // Continuous azimuth drift so the camera is never perfectly still during takes
+  let dwellDriftSpeedRadPerSec = 0.03; // very slow drift
+  let continuousAzimuthOffset = 0; // accumulates over time
+
+  // Subtle radius sway for breathing motion
+  let radiusSwayAmplitude = 0.03; // fraction of orbit radius (e.g., 0.03 = 3%)
+  let radiusSwaySpeed = 0.35; // speed multiplier for sway animation
+
+  // Takes system: queue of camera angles with dwell/transition timings
+  // Optional per-take overrides: driftRadPerSec, radiusSwayAmp, radiusSwayHz
+  /** @type {Array<{ azimuthDeg: number, elevationDeg?: number, radiusFactor?: number, fovDeg?: number, dwellSeconds?: number, transitionSeconds?: number, driftRadPerSec?: number, radiusSwayAmp?: number, radiusSwayHz?: number }>} */
+  let takes = [];
+  let takesActive = false;
+  let currentTakeIndex = 0;
+  let phase = /** @type {'dwell' | 'transition'} */ ('dwell');
+  let phaseTime = 0; // seconds within current phase
+  const defaultDwell = 4.0;
+  const defaultTransition = 1.6;
+
+  // Manual override while user drags: pause updates and blend back after release
+  let manualOverride = false;
+  let resumeBlendDuration = 1.2;
+  let resumeBlendRemaining = 0;
+  const resumeStartPos = new THREE.Vector3();
+  let resumeStartFov = 55;
+
+  function enable() {
+    enabled = true;
+    timeSeconds = 0;
+    phaseTime = 0;
+    phase = 'dwell';
+    if (takes && takes.length) {
+      takesActive = true;
+      currentTakeIndex = 0;
+    }
+    if (bokehPass) bokehPass.enabled = true;
+  }
+
+  function disable() {
+    enabled = false;
+    if (bokehPass) bokehPass.enabled = false;
+  }
+
+  function isEnabled() {
+    return enabled;
+  }
+
+  function setBokehPass(pass) {
+    bokehPass = pass || null;
+    if (bokehPass) bokehPass.enabled = enabled;
+  }
+
+  /**
+   * Adjust orbit behavior at runtime.
+   * @param {{ speed?: number, radius?: number, elevation?: number, elevationSway?: number }} params
+   */
+  function setOrbitParams(params = {}) {
+    const { speed, radius, elevation, elevationSway, dwellDriftSpeed, radiusSwayAmp, radiusSwayHz } = params;
+    if (typeof speed === 'number' && isFinite(speed)) orbitSpeedRadPerSec = Math.max(0, speed);
+    if (typeof radius === 'number' && isFinite(radius)) radiusFactor = Math.max(0.1, radius);
+    if (typeof elevation === 'number' && isFinite(elevation)) elevationDeg = Math.max(5, Math.min(90, elevation));
+    if (typeof elevationSway === 'number' && isFinite(elevationSway)) elevationSwayDeg = Math.max(0, Math.min(20, elevationSway));
+    if (typeof dwellDriftSpeed === 'number' && isFinite(dwellDriftSpeed)) dwellDriftSpeedRadPerSec = Math.max(0, dwellDriftSpeed);
+    if (typeof radiusSwayAmp === 'number' && isFinite(radiusSwayAmp)) radiusSwayAmplitude = Math.max(0, Math.min(0.2, radiusSwayAmp));
+    if (typeof radiusSwayHz === 'number' && isFinite(radiusSwayHz)) radiusSwaySpeed = Math.max(0, Math.min(5, radiusSwayHz));
+  }
+
+  /**
+   * Configure field-of-view pulsing.
+   * @param {{ enabled?: boolean, base?: number, amplitudeDeg?: number }} params
+   */
+  function setFovPulse(params = {}) {
+    const { enabled, base, amplitudeDeg } = params;
+    if (typeof enabled === 'boolean') fovPulseEnabled = enabled;
+    if (typeof base === 'number' && isFinite(base)) baseFovDeg = Math.max(10, Math.min(120, base));
+    if (typeof amplitudeDeg === 'number' && isFinite(amplitudeDeg)) fovPulseAmplitudeDeg = Math.max(0, Math.min(25, amplitudeDeg));
+  }
+
+  /** Enable/disable manual control override during drag. */
+  function setManualControlActive(active) {
+    manualOverride = !!active;
+    if (!manualOverride) {
+      resumeBlendRemaining = resumeBlendDuration;
+      resumeStartPos.copy(camera.position);
+      resumeStartFov = camera.fov;
+    }
+  }
+
+  /** Configure the blend time used when resuming after manual drag. */
+  function setResumeBlendSeconds(seconds) {
+    if (typeof seconds === 'number' && isFinite(seconds)) {
+      resumeBlendDuration = Math.max(0, seconds);
+    }
+  }
+
+  /**
+   * Define a sequence of takes (angles) for cinematic mode.
+   * @param {Array<{ azimuthDeg: number, elevationDeg?: number, radiusFactor?: number, fovDeg?: number, dwellSeconds?: number, transitionSeconds?: number }>} list
+   */
+  function setTakes(list = []) {
+    takes = Array.isArray(list) ? list.filter(Boolean) : [];
+    currentTakeIndex = 0;
+    phase = 'dwell';
+    phaseTime = 0;
+    takesActive = takes.length > 0;
+    // Sanitize takes: clamp elevation to a safe range to prevent pole-crossing flips
+    takes = takes.map((a) => {
+      if (a && typeof a.elevationDeg === 'number' && isFinite(a.elevationDeg)) {
+        const e = Math.max(15, Math.min(90, a.elevationDeg));
+        if (e !== a.elevationDeg) {
+          return { ...a, elevationDeg: e };
+        }
+      }
+      return a;
+    });
+  }
+
+  /**
+   * Update camera transform and DOF for the current frame.
+   * @param {number} deltaSeconds
+   * @param {THREE.Object3D | null} subjectRoot
+   */
+  function update(deltaSeconds, subjectRoot) {
+    if (!enabled || !subjectRoot || !controls) return;
+    timeSeconds += Math.max(0, deltaSeconds || 0);
+
+    // If the user is manually controlling, skip cinematic updates
+    if (manualOverride) return;
+
+    const box = new THREE.Box3().setFromObject(subjectRoot);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+    const radius = Math.max(size.x, size.y, size.z) * 0.5 || 1;
+
+    // Helper easing
+    const easeInOut = (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+    // Resolve cinematic angles either from takes or continuous orbit
+    let azimuthRad;
+    let phi; // polar angle
+    let orbitRadius;
+    let fovNow = baseFovDeg;
+
+    if (takesActive && takes.length) {
+      let a = takes[currentTakeIndex];
+      let nextIndex = (currentTakeIndex + 1) % takes.length;
+      let b = takes[nextIndex];
+      let dwell = (a.dwellSeconds != null ? a.dwellSeconds : defaultDwell);
+      let tdur = (a.transitionSeconds != null ? a.transitionSeconds : defaultTransition);
+
+      // Advance phase timing
+      phaseTime += Math.max(0, deltaSeconds || 0);
+      if (phase === 'dwell' && phaseTime >= dwell) {
+        phase = 'transition';
+        phaseTime = 0;
+      } else if (phase === 'transition' && phaseTime >= tdur) {
+        // Finish transition: advance to next take for the dwell phase
+        phase = 'dwell';
+        currentTakeIndex = nextIndex;
+        phaseTime = 0;
+        // Refresh references so this frame uses the new current take
+        a = takes[currentTakeIndex];
+        nextIndex = (currentTakeIndex + 1) % takes.length;
+        b = takes[nextIndex];
+        dwell = (a.dwellSeconds != null ? a.dwellSeconds : defaultDwell);
+        tdur = (a.transitionSeconds != null ? a.transitionSeconds : defaultTransition);
+      }
+
+      // Per-take drift speed (subtle azimuth drift) — apply ONLY during dwell to avoid wobble in transitions
+      const driftNow = (typeof a.driftRadPerSec === 'number' && isFinite(a.driftRadPerSec)) ? a.driftRadPerSec : dwellDriftSpeedRadPerSec;
+
+      const azA = THREE.MathUtils.degToRad(a.azimuthDeg || 0);
+      const azB = THREE.MathUtils.degToRad(b.azimuthDeg || 0);
+      const elA = THREE.MathUtils.degToRad((a.elevationDeg != null ? a.elevationDeg : elevationDeg));
+      const elB = THREE.MathUtils.degToRad((b.elevationDeg != null ? b.elevationDeg : elevationDeg));
+      const rfA = (a.radiusFactor != null ? a.radiusFactor : radiusFactor);
+      const rfB = (b.radiusFactor != null ? b.radiusFactor : radiusFactor);
+      const fovA = (a.fovDeg != null ? a.fovDeg : baseFovDeg);
+      const fovB = (b.fovDeg != null ? b.fovDeg : baseFovDeg);
+      const swayAmpA = (typeof a.radiusSwayAmp === 'number' && isFinite(a.radiusSwayAmp)) ? a.radiusSwayAmp : radiusSwayAmplitude;
+      const swayAmpB = (typeof b.radiusSwayAmp === 'number' && isFinite(b.radiusSwayAmp)) ? b.radiusSwayAmp : radiusSwayAmplitude;
+      const swayHzA  = (typeof a.radiusSwayHz === 'number' && isFinite(a.radiusSwayHz)) ? a.radiusSwayHz : radiusSwaySpeed;
+      const swayHzB  = (typeof b.radiusSwayHz === 'number' && isFinite(b.radiusSwayHz)) ? b.radiusSwayHz : radiusSwaySpeed;
+
+      if (phase === 'transition' && tdur > 1e-3) {
+        const p = easeInOut(Math.max(0, Math.min(1, phaseTime / tdur)));
+        // Shortest-way azimuth interpolation
+        let d = azB - azA;
+        d = Math.atan2(Math.sin(d), Math.cos(d));
+        // No drift/sway during transitions to keep smooth path
+        azimuthRad = azA + d * p;
+        phi = elA + (elB - elA) * p;
+        orbitRadius = Math.max(1e-6, radius * (rfA + (rfB - rfA) * p));
+        fovNow = fovA + (fovB - fovA) * p;
+      } else {
+        // Dwell: hold angle, allow a subtle micro sway if configured
+        const sway = elevationSwayDeg > 0 ? Math.sin(timeSeconds * 0.4) * THREE.MathUtils.degToRad(elevationSwayDeg) : 0;
+        // Apply drift only during dwell
+        continuousAzimuthOffset += Math.max(0, deltaSeconds || 0) * driftNow;
+        azimuthRad = azA + continuousAzimuthOffset;
+        phi = elA + sway;
+        const amp = swayAmpA;
+        const hz  = swayHzA;
+        const swayR = 1 + (amp > 0 ? Math.sin(timeSeconds * hz) * amp : 0);
+        orbitRadius = Math.max(1e-6, radius * rfA * swayR);
+        fovNow = fovA;
+      }
+    } else {
+      // Legacy continuous orbit
+      const swayR = 1 + (radiusSwayAmplitude > 0 ? Math.sin(timeSeconds * radiusSwaySpeed) * radiusSwayAmplitude : 0);
+      orbitRadius = Math.max(1e-6, radius * radiusFactor * swayR);
+      const theta = timeSeconds * orbitSpeedRadPerSec; // azimuth angle over time
+      const basePhi = THREE.MathUtils.degToRad(elevationDeg);
+      const sway = elevationSwayDeg > 0 ? Math.sin(timeSeconds * 0.4) * THREE.MathUtils.degToRad(elevationSwayDeg) : 0;
+      phi = THREE.MathUtils.clamp(basePhi + sway, THREE.MathUtils.degToRad(15), THREE.MathUtils.degToRad(80));
+      azimuthRad = theta;
+    }
+
+    phi = THREE.MathUtils.clamp(phi, THREE.MathUtils.degToRad(15), THREE.MathUtils.degToRad(80));
+
+    const sinPhi = Math.sin(phi), cosPhi = Math.cos(phi);
+    const x = center.x + orbitRadius * sinPhi * Math.cos(azimuthRad);
+    const z = center.z + orbitRadius * sinPhi * Math.sin(azimuthRad);
+    const y = center.y + orbitRadius * cosPhi;
+    if (resumeBlendRemaining > 0) {
+      const t = 1 - Math.max(0, resumeBlendRemaining / Math.max(1e-6, resumeBlendDuration));
+      const tt = easeInOut(Math.max(0, Math.min(1, t)));
+      const target = new THREE.Vector3(x, y, z);
+      camera.position.set(
+        THREE.MathUtils.lerp(resumeStartPos.x, target.x, tt),
+        THREE.MathUtils.lerp(resumeStartPos.y, target.y, tt),
+        THREE.MathUtils.lerp(resumeStartPos.z, target.z, tt)
+      );
+      resumeBlendRemaining -= Math.max(0, deltaSeconds || 0);
+    } else {
+      camera.position.set(x, y, z);
+    }
+    // Build a bank-free camera orientation relative to world-up to avoid upside-down flips
+    const forward = center.clone().sub(camera.position).normalize();
+    const worldUp = new THREE.Vector3(0, 1, 0);
+    let right = new THREE.Vector3().crossVectors(forward, worldUp);
+    // Handle the rare case where forward is (near-)parallel to worldUp
+    if (right.lengthSq() < 1e-6) {
+      forward.x += 1e-4;
+      forward.normalize();
+      right = new THREE.Vector3().crossVectors(forward, worldUp);
+    }
+    right.normalize();
+    const up = new THREE.Vector3().crossVectors(right, forward).normalize();
+    const viewMatrix = new THREE.Matrix4().makeBasis(right, up, forward.clone().negate());
+    camera.quaternion.setFromRotationMatrix(viewMatrix);
+    camera.up.copy(up);
+
+    // FOV (optional pulsing)
+    if (fovPulseEnabled && fovPulseAmplitudeDeg > 0) {
+      camera.fov = (fovNow || baseFovDeg) + Math.sin(timeSeconds * 0.6) * fovPulseAmplitudeDeg;
+    } else {
+      const targetFov = (fovNow || baseFovDeg);
+      if (resumeBlendRemaining > 0) {
+        const t = 1 - Math.max(0, resumeBlendRemaining / Math.max(1e-6, resumeBlendDuration));
+        const tt = easeInOut(Math.max(0, Math.min(1, t)));
+        camera.fov = THREE.MathUtils.lerp(resumeStartFov, targetFov, tt);
+      } else {
+        camera.fov = targetFov;
+      }
+    }
+    camera.updateProjectionMatrix();
+
+    // Update DOF uniforms with focus on the NEAR SURFACE of the subject
+    if (bokehPass) {
+      const sphere = new THREE.Sphere();
+      box.getBoundingSphere(sphere);
+      const distToCenter = camera.position.distanceTo(sphere.center);
+
+      // Focar próximo da casca do carro voltada pra câmera (evita focar “atrás”)
+      let focusDist = distToCenter - sphere.radius * 0.9;
+      // Guard-rails: nunca abaixo de 0.5 e não muito além do centro
+      focusDist = Math.max(0.5, Math.min(focusDist, distToCenter + sphere.radius * 0.5));
+
+      bokehPass.materialBokeh.uniforms['focus'].value   = focusDist;
+      bokehPass.materialBokeh.uniforms['aperture'].value = 0.00020; // blur mais controlado
+      bokehPass.materialBokeh.uniforms['maxblur'].value  = 0.009;   // evita “borrão” exagerado
+    }
+  }
+
+  return { enable, disable, isEnabled, setBokehPass, setOrbitParams, setFovPulse, setTakes, setManualControlActive, setResumeBlendSeconds, update };
+}
+
+

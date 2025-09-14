@@ -1,8 +1,5 @@
 import * as THREE from 'three';
 
-// Local LOGOS_LOG to avoid circular imports
-const LOGOS_LOG = (t,m,d)=>{ try{ if(localStorage.getItem('LOGOS_DEBUG')==='1'){ if(d!==undefined) console.log(`[LOGOS][${t}]`,m,d); else console.log(`[LOGOS][${t}]`,m);} }catch(_){} };
-
 // Role-based material name matchers. Update these to match each model's material names.
 // You can override at runtime via setMaterialRoleMatchers().
 export const materialRoleMatchers = {
@@ -10,7 +7,7 @@ export const materialRoleMatchers = {
   tras: [/trás|tras|rear|back/i],
   lateral1: [/lateral\s*1|lateral\.?001|lateral\b(?!.*2)|left|esquerda/i],
   lateral2: [/lateral\s*2|lateral\.?002|right|direita/i],
-  logos: [/^LOGOS$/i, /\blogo\b|\blogos\b/i],
+  logos: [/\blogo\b|\blogos\b/i],
 };
 
 export function setMaterialRoleMatchers(overrides) {
@@ -56,7 +53,7 @@ function ensureClonedMaterialFor(mesh, indexOrMat, userDataFlagKey) {
   }
 }
 
-export function listRoleInstances(modelRoot, roleKey) {
+function listRoleInstances(modelRoot, roleKey) {
   const results = [];
   if (!modelRoot) return results;
   modelRoot.traverse((child) => {
@@ -102,6 +99,11 @@ export function rotateRoleInstance(modelRoot, roleKey, instanceIndex, quarterTur
   // Get the actual center of the fitted texture using stored UV bounds
   const uvCenter = getTextureUVCenter(tex);
   
+  // PIVOT CUSTOMIZATION - Replace getTextureUVCenter with:
+  // const uvCenter = getFixedCenter(tex);        // Option 1: Always center
+  // const uvCenter = getCustomPivot(tex);        // Option 2: Custom point  
+  // const uvCenter = getTopLeftPivot(tex);       // Option 3: Top-left
+  
   console.log(`[rotate] Instance ${instanceIndex} - Using dynamic UV center: (${uvCenter.x}, ${uvCenter.y})`);
   console.log(`[rotate] UV bounds stored:`, tex.userData?.uvBounds || 'none');
   
@@ -113,18 +115,6 @@ export function rotateRoleInstance(modelRoot, roleKey, instanceIndex, quarterTur
   const twoPi = Math.PI * 2;
   r = ((r % twoPi) + twoPi) % twoPi;
   tex.rotation = r;
-  
-  // LOGOS refit opcional em rotações ímpares
-  try {
-    if (typeof localStorage !== 'undefined' && localStorage.getItem('LOGOS_REFIT_ODD') === '1') {
-      const q = (()=>{ const t=Math.PI*2; const r=((tex.rotation%t)+t)%t; return Math.round(r/(Math.PI/2))%4; })();
-      if (q % 2 !== 0) {
-        // Reaproveitar UV bounds ou recalcular via fitTextureToMaterialGroups
-        try { fitTextureToMaterialGroups(item.mesh, item.materialIndex, tex, { padPercent: (tex.userData?.uvBounds?.padPercent ?? 0.06) }); } catch(_) {}
-        LOGOS_LOG && LOGOS_LOG('refit', `idx=${instanceIndex} q=${q} re-fit repeat/offset`);
-      }
-    }
-  } catch(_) {}
   
   tex.needsUpdate = true;
   mat.needsUpdate = true;
@@ -286,7 +276,7 @@ function fitTextureToMaterialGroups(mesh, materialIndex, texture, opts = {}) {
 // Calculate the actual center of a fitted texture in UV space
 function getTextureUVCenter(texture) {
   if (!texture || !texture.userData || !texture.userData.uvBounds) {
-    return { x: 0.5, y: 0.5 }; // fallback to middle
+    return { x: 0.3, y: 0.3 }; // fallback to middle
   }
   
   const bounds = texture.userData.uvBounds;
@@ -294,6 +284,26 @@ function getTextureUVCenter(texture) {
     x: bounds.centerU,
     y: bounds.centerV
   };
+}
+
+// Alternative pivot options - uncomment the one you want:
+
+// Option 1: Always center of texture (ignores UV bounds)
+function getFixedCenter(texture) {
+  return { x: 0.5, y: 0.5 };
+}
+
+// Option 2: Custom pivot point (adjust values as needed)
+function getCustomPivot(texture) {
+  return { 
+    x: 0.3,  // Move pivot left (0.0) or right (1.0) 
+    y: 0.7   // Move pivot up (0.0) or down (1.0)
+  };
+}
+
+// Option 3: Top-left corner pivot
+function getTopLeftPivot(texture) {
+  return { x: 0.0, y: 0.0 };
 }
 
 export function getAllMaterialNames(modelRoot) {
@@ -317,4 +327,76 @@ export function applyLogoRegionsFromUI(modelRoot, uiRefs) {
   setMaterialsVisibleByRole(modelRoot, 'tras', trasOn);
   setMaterialsVisibleByRole(modelRoot, 'lateral1', lat1On);
   setMaterialsVisibleByRole(modelRoot, 'lateral2', lat2On);
+}
+
+// Storage for individual LOGOS texture rotations (in degrees)
+const logosTextureRotations = new Map();
+
+function getLogoInstanceKey(modelRoot, instanceIndex) {
+  // Create a unique key for this model + instance combination
+  return `${modelRoot.uuid}_${instanceIndex}`;
+}
+
+export function setLogoTextureRotation(modelRoot, instanceIndex, degrees) {
+  if (!modelRoot) return;
+  
+  const key = getLogoInstanceKey(modelRoot, instanceIndex);
+  logosTextureRotations.set(key, degrees);
+  
+  // Apply the rotation to the texture
+  const list = listRoleInstances(modelRoot, 'logos');
+  const item = list[instanceIndex];
+  if (!item) return;
+  
+  const mat = ensureClonedMaterialFor(item.mesh, Array.isArray(item.mesh.material) ? item.materialIndex : item.mesh.material, '_clonedForRoleTexture');
+  if (!mat || !('map' in mat) || !mat.map) return;
+  
+  const tex = mat.map;
+  
+  // Get the actual center of the fitted texture using stored UV bounds
+  const uvCenter = getTextureUVCenter(tex);
+  
+  // PIVOT CUSTOMIZATION - Replace getTextureUVCenter with:
+  // const uvCenter = getFixedCenter(tex);        // Option 1: Always center
+  // const uvCenter = getCustomPivot(tex);        // Option 2: Custom point  
+  // const uvCenter = getTopLeftPivot(tex);       // Option 3: Top-left
+  
+  // Set the center for rotation
+  try { tex.center?.set?.(uvCenter.x, uvCenter.y); } catch (_) {}
+  
+  // Convert degrees to radians and apply rotation
+  const radians = (degrees * Math.PI) / 180;
+  tex.rotation = radians;
+  
+  tex.needsUpdate = true;
+  mat.needsUpdate = true;
+  
+  console.log(`[LOGOS] Instance ${instanceIndex} texture rotated: ${degrees}° (${radians.toFixed(3)} rad) - Center: (${uvCenter.x.toFixed(3)}, ${uvCenter.y.toFixed(3)})`);
+}
+
+export function getLogoTextureRotation(modelRoot, instanceIndex) {
+  const key = getLogoInstanceKey(modelRoot, instanceIndex);
+  return logosTextureRotations.get(key) || 0;
+}
+
+export function resetLogoTextureRotation(modelRoot, instanceIndex) {
+  if (!modelRoot) return;
+  
+  const key = getLogoInstanceKey(modelRoot, instanceIndex);
+  logosTextureRotations.set(key, 0);
+  
+  // Reset texture rotation
+  const list = listRoleInstances(modelRoot, 'logos');
+  const item = list[instanceIndex];
+  if (!item) return;
+  
+  const mat = ensureClonedMaterialFor(item.mesh, Array.isArray(item.mesh.material) ? item.materialIndex : item.mesh.material, '_clonedForRoleTexture');
+  if (!mat || !('map' in mat) || !mat.map) return;
+  
+  const tex = mat.map;
+  tex.rotation = 0;
+  tex.needsUpdate = true;
+  mat.needsUpdate = true;
+  
+  console.log(`[LOGOS] Instance ${instanceIndex} texture rotation reset`);
 }

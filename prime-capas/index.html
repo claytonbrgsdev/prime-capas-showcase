@@ -45,34 +45,73 @@
             </div>
             <hr />
             <h2>LOGOS (4 instâncias)</h2>
-            <div id="logosControls" class="control" style="gap:10px">
-                <div class="row" style="grid-template-columns:auto 1fr auto auto auto auto; gap:8px">
-                    <label><input id="logoInst0Visible" type="checkbox" checked /> lateral - motorista</label>
-                    <span></span>
-                    <button id="logoInst0RotCCW" type="button">↺ 90°</button>
-                    <button id="logoInst0RotCW" type="button">↻ 90°</button>
-                    <button id="logoInst0Reset" type="button">Reset</button>
+            <div id="logosControls" class="control" style="gap:15px">
+                <!-- Instance 0 - Lateral Motorista -->
+                <div class="logo-instance-group" style="border: 1px solid rgba(148,163,184,0.15); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
+                    <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
+                        <label><input id="logoInst0Visible" type="checkbox" checked /> lateral - motorista</label>
+                        <span></span>
+                        <button id="logoInst0RotCCW" type="button">↺ 180°</button>
+                        <button id="logoInst0RotCW" type="button">↻ 180°</button>
+                    </div>
+                    <div class="rotation-sliders">
+                        <div class="slider-row">
+                            <label for="logoInst0Rot">Rotação:</label>
+                            <input id="logoInst0Rot" type="range" min="-180" max="180" value="0" step="1" />
+                            <span id="logoInst0RotValue">0°</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="row" style="grid-template-columns:auto 1fr auto auto auto auto; gap:8px">
-                    <label><input id="logoInst1Visible" type="checkbox" checked /> lateral - passageiro</label>
-                    <span></span>
-                    <button id="logoInst1RotCCW" type="button">↺ 90°</button>
-                    <button id="logoInst1RotCW" type="button">↻ 90°</button>
-                    <button id="logoInst1Reset" type="button">Reset</button>
+
+                <!-- Instance 1 - Lateral Passageiro -->
+                <div class="logo-instance-group" style="border: 1px solid rgba(148,163,184,0.15); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
+                    <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
+                        <label><input id="logoInst1Visible" type="checkbox" checked /> lateral - passageiro</label>
+                        <span></span>
+                        <button id="logoInst1RotCCW" type="button">↺ 180°</button>
+                        <button id="logoInst1RotCW" type="button">↻ 180°</button>
+                    </div>
+                    <div class="rotation-sliders">
+                        <div class="slider-row">
+                            <label for="logoInst1Rot">Rotação:</label>
+                            <input id="logoInst1Rot" type="range" min="-180" max="180" value="0" step="1" />
+                            <span id="logoInst1RotValue">0°</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="row" style="grid-template-columns:auto 1fr auto auto auto auto; gap:8px">
-                    <label><input id="logoInst2Visible" type="checkbox" checked /> traseira</label>
-                    <span></span>
-                    <button id="logoInst2RotCCW" type="button">↺ 90°</button>
-                    <button id="logoInst2RotCW" type="button">↻ 90°</button>
-                    <button id="logoInst2Reset" type="button">Reset</button>
+
+                <!-- Instance 2 - Traseira -->
+                <div class="logo-instance-group" style="border: 1px solid rgba(148,163,184,0.15); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
+                    <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
+                        <label><input id="logoInst2Visible" type="checkbox" checked /> traseira</label>
+                        <span></span>
+                        <button id="logoInst2RotCCW" type="button">↺ 180°</button>
+                        <button id="logoInst2RotCW" type="button">↻ 180°</button>
+                    </div>
+                    <div class="rotation-sliders">
+                        <div class="slider-row">
+                            <label for="logoInst2Rot">Rotação:</label>
+                            <input id="logoInst2Rot" type="range" min="-180" max="180" value="0" step="1" />
+                            <span id="logoInst2RotValue">0°</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="row" style="grid-template-columns:auto 1fr auto auto auto auto; gap:8px">
-                    <label><input id="logoInst3Visible" type="checkbox" checked /> dianteira</label>
-                    <span></span>
-                    <button id="logoInst3RotCCW" type="button">↺ 90°</button>
-                    <button id="logoInst3RotCW" type="button">↻ 90°</button>
-                    <button id="logoInst3Reset" type="button">Reset</button>
+
+                <!-- Instance 3 - Dianteira -->
+                <div class="logo-instance-group" style="border: 1px solid rgba(148,163,184,0.15); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
+                    <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
+                        <label><input id="logoInst3Visible" type="checkbox" checked /> dianteira</label>
+                        <span></span>
+                        <button id="logoInst3RotCCW" type="button">↺ 180°</button>
+                        <button id="logoInst3RotCW" type="button">↻ 180°</button>
+                    </div>
+                    <div class="rotation-sliders">
+                        <div class="slider-row">
+                            <label for="logoInst3Rot">Rotação:</label>
+                            <input id="logoInst3Rot" type="range" min="-180" max="180" value="0" step="1" />
+                            <span id="logoInst3RotValue">0°</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </aside>
