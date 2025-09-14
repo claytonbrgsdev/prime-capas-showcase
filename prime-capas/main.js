@@ -25,6 +25,27 @@ function LOGOS_LOG(type, msg, data) {
 // Expose debug helper in dev environment
 try { window.LOGOS_SET_DEBUG = (v) => localStorage.setItem('LOGOS_DEBUG', v ? '1' : '0'); } catch(_) {}
 
+// ===== LOGOS Instance Management =====
+function logosInstanceSignature(item) {
+  const mesh = item.mesh; const mi = item.materialIndex; const mat = item.material;
+  return `${mesh?.name || mesh?.id}#${mi}#${mat?.name || 'mat'}`;
+}
+
+function logosLogInstanceMap(modelRoot) {
+  const list = window.__logos_listInstances ? window.__logos_listInstances(modelRoot) : [];
+  const rows = list.map((it, idx) => ({ idx, sig: logosInstanceSignature(it), meshId: it.mesh.id, mesh: it.mesh.name, materialIndex: it.materialIndex, material: it.material?.name }));
+  LOGOS_LOG('map', 'instances'); console.table(rows);
+  try { localStorage.setItem('logos:map:v1', JSON.stringify(rows)); LOGOS_LOG('map', 'saved logos:map:v1'); } catch(_) {}
+  return rows;
+}
+
+function logosLogTexState(idx, tex, extras={}) {
+  const rep = tex?.repeat || {x:NaN,y:NaN}; const off = tex?.offset || {x:NaN,y:NaN}; const ctr = tex?.center || {x:NaN,y:NaN};
+  const ub = (tex?.userData && tex.userData.uvBounds) || {};
+  const q = (()=>{ const r = tex?.rotation || 0; const pi2 = Math.PI*2; const nr = ((r%pi2)+pi2)%pi2; return Math.round(nr/(Math.PI/2))%4; })();
+  LOGOS_LOG('state', 'texture', { idx, q, rot:+(tex?.rotation||0).toFixed?.(3), rep:`(${+(rep.x||0).toFixed(3)},${+(rep.y||0).toFixed(3)})`, off:`(${+(off.x||0).toFixed(3)},${+(off.y||0).toFixed(3)})`, ctr:`(${+(ctr.x||0).toFixed(3)},${+(ctr.y||0).toFixed(3)})`, uvCtr:`(${+(ub.centerU||0).toFixed(3)},${+(ub.centerV||0).toFixed(3)})`, ...extras });
+}
+
 (function () {
   // ===== App State =====
   /** @type {THREE.WebGLRenderer} */
@@ -804,6 +825,9 @@ try { window.LOGOS_SET_DEBUG = (v) => localStorage.setItem('LOGOS_DEBUG', v ? '1
           console.log('[materials] model materials:', names);
         } catch (_) {}
         try { refreshLogosControlsAvailability && refreshLogosControlsAvailability(); } catch (_) {}
+        
+        // LOGOS: Log instance mapping após modelo carregado/ready
+        try { logosLogInstanceMap(modelRoot); } catch (_) {}
         
         frameObject3D(modelRoot);
         
