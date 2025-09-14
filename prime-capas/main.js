@@ -83,6 +83,107 @@ function applyDefaultsForLogos(modelRoot){
   });
 }
 
+// ===== LOGOS QA Helpers (dev-only) =====
+function __logos_list(modelRoot){ return window.__logos_listInstances ? window.__logos_listInstances(modelRoot) : []; }
+function __logos_sig(it){ return (typeof logosInstanceSignature === 'function') ? logosInstanceSignature(it) : `${it.mesh?.name||it.mesh?.id}#${it.materialIndex}#${it.material?.name||'mat'}`; }
+function __logos_qFromRad(rad){ const t=Math.PI*2; const r=((rad%t)+t)%t; return Math.round(r/(Math.PI/2))%4; }
+
+function LOGOS_QA_map(){
+  const rows = logosLogInstanceMap ? logosLogInstanceMap(modelRoot) : [];
+  LOGOS_LOG && LOGOS_LOG('qa','map captured', {count: rows.length});
+  return rows;
+}
+
+function LOGOS_QA_saveFromCurrent(){
+  const list = __logos_list(modelRoot);
+  const rows = JSON.parse(localStorage.getItem('logos:map:v1') || '[]');
+  rows.forEach((r) => {
+    const it = list[r.idx]; const tex = it?.material?.map;
+    if (!tex) return;
+    const q = __logos_qFromRad(tex.rotation || 0);
+    localStorage.setItem('logos:pref:'+r.sig, JSON.stringify({ rotationQ: q }));
+    LOGOS_LOG && LOGOS_LOG('persist','save-from-current', { sig: r.sig, rotationQ: q });
+  });
+  return true;
+}
+
+/** Define preferências por IDX rapidamente: LOGOS_QA_setPrefsByIdx({0:1,1:2,2:0,3:3}) */
+function LOGOS_QA_setPrefsByIdx(mapping){
+  const rows = JSON.parse(localStorage.getItem('logos:map:v1') || '[]');
+  rows.forEach((r) => {
+    const q = mapping[r.idx];
+    if (Number.isInteger(q)) {
+      localStorage.setItem('logos:pref:'+r.sig, JSON.stringify({ rotationQ: q }));
+      LOGOS_LOG && LOGOS_LOG('persist','write', { sig: r.sig, rotationQ: q });
+    }
+  });
+  return true;
+}
+
+/** Reaplica prefs imediatamente (útil para QA manual) */
+function LOGOS_QA_reapply(){ try { applyDefaultsForLogos(modelRoot); LOGOS_LOG && LOGOS_LOG('qa','reapply-called'); } catch(_) {} return true; }
+
+/** Verificação rígida: q atual vs esperado + centro UV vs center do texture */
+function LOGOS_QA_verify(tolerance=1e-3){
+  const list = __logos_list(modelRoot);
+  const rows = JSON.parse(localStorage.getItem('logos:map:v1') || '[]');
+  const out = [];
+  let pass = 0, fail = 0;
+
+  rows.forEach((r) => {
+    const it = list[r.idx]; const tex = it?.material?.map;
+    if (!tex) { out.push({ idx:r.idx, sig:r.sig, ok:false, reason:'no texture' }); fail++; return; }
+
+    // q atual
+    const qNow = __logos_qFromRad(tex.rotation || 0);
+
+    // q esperado
+    let pref = null; try { pref = JSON.parse(localStorage.getItem('logos:pref:'+r.sig) || 'null'); } catch(_) {}
+    const qExp = (pref && Number.isInteger(pref.rotationQ)) ? pref.rotationQ : null;
+
+    // centros
+    const ctr = tex.center || {x:NaN,y:NaN};
+    const ub = tex.userData?.uvBounds || {};
+    const uvCx = (ub.centerU != null) ? ub.centerU : NaN;
+    const uvCy = (ub.centerV != null) ? ub.centerV : NaN;
+    const cdx = Math.abs((ctr.x||0) - (uvCx||0));
+    const cdy = Math.abs((ctr.y||0) - (uvCy||0));
+    const centerOK = (isFinite(cdx) && isFinite(cdy) && cdx <= tolerance && cdy <= tolerance);
+
+    const okQ = (qExp == null) ? true : (qNow === qExp);
+    const ok = !!okQ && !!centerOK;
+
+    out.push({
+      idx: r.idx,
+      sig: r.sig,
+      q_now: qNow,
+      q_exp: qExp,
+      center_dx: +cdx.toFixed(4),
+      center_dy: +cdy.toFixed(4),
+      okQ: !!okQ,
+      centerOK: !!centerOK,
+      ok
+    });
+    ok ? pass++ : fail++;
+  });
+
+  LOGOS_LOG && LOGOS_LOG('verify','results'); console.table(out);
+  LOGOS_LOG && LOGOS_LOG('verify','summary', { pass, fail, total: pass+fail, tolerance });
+  return { pass, fail, total: pass+fail, details: out };
+}
+
+// Expõe no escopo global (dev)
+try {
+  window.LOGOS_QA = {
+    map: LOGOS_QA_map,
+    saveFromCurrent: LOGOS_QA_saveFromCurrent,
+    setPrefsByIdx: LOGOS_QA_setPrefsByIdx,
+    reapply: LOGOS_QA_reapply,
+    verify: LOGOS_QA_verify
+  };
+  LOGOS_LOG && LOGOS_LOG('qa','helpers-ready');
+} catch(_) {}
+
 (function () {
   // ===== App State =====
   /** @type {THREE.WebGLRenderer} */
@@ -729,7 +830,7 @@ function applyDefaultsForLogos(modelRoot){
           applyTextureToRole('lateral1', url, { anisotropy: 8, flipY: false });
           applyTextureToRole('lateral2', url, { anisotropy: 8, flipY: false });
           // LOGOS: Reagendar reaplicação de defaults após TextureLoader
-          setTimeout(() => { try { applyDefaultsForLogos(modelRoot); } catch(_){} }, 50);
+          setTimeout(() => { try { applyDefaultsForLogos(modelRoot); LOGOS_LOG && LOGOS_LOG('persist','reapply-after-upload'); } catch(_){} }, 50);
         } finally {
           try { pngUploadEl.value = ''; } catch (_) {}
         }
