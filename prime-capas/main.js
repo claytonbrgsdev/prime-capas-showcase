@@ -13,7 +13,7 @@ import { initializeCamera, enforceCameraDistanceClamp as clampCameraDistance, up
 import { createCinematicController } from './camera_cinematic.js';
 import { applyColorToModel as applyColorToModelExt, applyColorToSpecificTarget as applyColorToSpecificTargetExt, disableMapForSpecificTarget as disableMapForSpecificTargetExt, applyLineColor as applyLineColorExt } from './materials/core.js';
 import { removeDefaultTextureMapsFromModel as removeDefaultTextureMapsFromModelExt } from './materials/baked.js';
-import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialNames as getAllMaterialNamesExt, setMaterialRoleMatchers as setMaterialRoleMatchersExt, applyTextureToRole as applyTextureToRoleExt, applyColorToRole as applyColorToRoleExt, getRoleInstanceCount as getRoleInstanceCountExt, setRoleInstanceVisible as setRoleInstanceVisibleExt, rotateRoleInstance as rotateRoleInstanceExt, setLogoTextureRotation, getLogoTextureRotation, resetLogoTextureRotation } from './materials/regions.js';
+import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialNames as getAllMaterialNamesExt, setMaterialRoleMatchers as setMaterialRoleMatchersExt, applyTextureToRole as applyTextureToRoleExt, applyColorToRole as applyColorToRoleExt, getRoleInstanceCount as getRoleInstanceCountExt, setRoleInstanceVisible as setRoleInstanceVisibleExt, rotateRoleInstance as rotateRoleInstanceExt, setLogoTextureRotation, getLogoTextureRotation, resetLogoTextureRotation, applyDefaultLogoRotations, getDefaultRotation } from './materials/regions.js';
 
 (function () {
   // ===== App State =====
@@ -679,8 +679,10 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
           setLogoTextureRotation(modelRoot, idx, degrees);
         });
         
-        // Initialize display
-        rotValue.textContent = `${rotSlider.value}°`;
+        // Initialize display with default rotation for this instance
+        const defaultRotation = getDefaultRotation(idx);
+        rotSlider.value = String(defaultRotation);
+        rotValue.textContent = `${defaultRotation}°`;
       }
     };
     bindLogoInstanceControls(0, logoInst0Visible, logoInst0RotCCW, logoInst0RotCW, logoInst0RotSlider, logoInst0RotValue);
@@ -689,28 +691,38 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
     bindLogoInstanceControls(3, logoInst3Visible, logoInst3RotCCW, logoInst3RotCW, logoInst3RotSlider, logoInst3RotValue);
 
     
-    // Reapply saved texture rotations after PNG upload
+    // Reapply saved texture rotations after PNG upload (includes default rotations)
     function reapplyLogoRotations() {
       if (!modelRoot) return;
       try {
-        // Reapply texture rotations for all instances
+        // Apply rotations for all instances (saved or default via getLogoTextureRotation)
         for (let i = 0; i < 4; i++) {
-          const savedRotation = getLogoTextureRotation(modelRoot, i);
-          if (savedRotation !== 0) {
-            setLogoTextureRotation(modelRoot, i, savedRotation);
-            console.log(`[LOGOS] Reapplied rotation ${savedRotation}° to instance ${i}`);
+          const rotationToApply = getLogoTextureRotation(modelRoot, i);
+          
+          if (rotationToApply !== 0) {
+            setLogoTextureRotation(modelRoot, i, rotationToApply);
+            console.log(`[LOGOS] Applied rotation ${rotationToApply}° to instance ${i}`);
           }
         }
+        
         // Update UI sliders to reflect current values
-        if (logoInst0RotSlider) { logoInst0RotSlider.value = String(getLogoTextureRotation(modelRoot, 0)); logoInst0RotValue.textContent = `${logoInst0RotSlider.value}°`; }
-        if (logoInst1RotSlider) { logoInst1RotSlider.value = String(getLogoTextureRotation(modelRoot, 1)); logoInst1RotValue.textContent = `${logoInst1RotSlider.value}°`; }
-        if (logoInst2RotSlider) { logoInst2RotSlider.value = String(getLogoTextureRotation(modelRoot, 2)); logoInst2RotValue.textContent = `${logoInst2RotSlider.value}°`; }
-        if (logoInst3RotSlider) { logoInst3RotSlider.value = String(getLogoTextureRotation(modelRoot, 3)); logoInst3RotValue.textContent = `${logoInst3RotSlider.value}°`; }
+        const updateSlider = (slider, valueEl, instanceIndex) => {
+          if (slider && valueEl) {
+            const currentRotation = getLogoTextureRotation(modelRoot, instanceIndex);
+            slider.value = String(currentRotation);
+            valueEl.textContent = `${currentRotation}°`;
+          }
+        };
+        
+        updateSlider(logoInst0RotSlider, logoInst0RotValue, 0);
+        updateSlider(logoInst1RotSlider, logoInst1RotValue, 1);
+        updateSlider(logoInst2RotSlider, logoInst2RotValue, 2);
+        updateSlider(logoInst3RotSlider, logoInst3RotValue, 3);
       } catch (e) {
         console.warn('[LOGOS] Error reapplying rotations:', e);
       }
     }
-
+    
     // PNG upload handler: apply to LOGOS role (and also front/back/lat roles for backward compat)
     if (pngUploadEl) {
       pngUploadEl.addEventListener('change', async () => {

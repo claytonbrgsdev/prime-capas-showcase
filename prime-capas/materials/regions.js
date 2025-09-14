@@ -89,35 +89,15 @@ export function setRoleInstanceVisible(modelRoot, roleKey, instanceIndex, enable
 }
 
 export function rotateRoleInstance(modelRoot, roleKey, instanceIndex, quarterTurns) {
-  const list = listRoleInstances(modelRoot, roleKey);
-  const item = list[instanceIndex];
-  if (!item) return;
-  const mat = ensureClonedMaterialFor(item.mesh, Array.isArray(item.mesh.material) ? item.materialIndex : item.mesh.material, '_clonedForRoleTexture');
-  if (!mat || !('map' in mat) || !mat.map) return;
-  const tex = mat.map;
+  // Pega a rotação atual em graus, que está salva no nosso controle de estado.
+  const currentDegrees = getLogoTextureRotation(modelRoot, instanceIndex);
   
-  // Get the actual center of the fitted texture using stored UV bounds
-  const uvCenter = getTextureUVCenter(tex);
-  
-  // PIVOT CUSTOMIZATION - Replace getTextureUVCenter with:
-  // const uvCenter = getFixedCenter(tex);        // Option 1: Always center
-  // const uvCenter = getCustomPivot(tex);        // Option 2: Custom point  
-  // const uvCenter = getTopLeftPivot(tex);       // Option 3: Top-left
-  
-  console.log(`[rotate] Instance ${instanceIndex} - Using dynamic UV center: (${uvCenter.x}, ${uvCenter.y})`);
-  console.log(`[rotate] UV bounds stored:`, tex.userData?.uvBounds || 'none');
-  
-  try { tex.center?.set?.(uvCenter.x, uvCenter.y); } catch (_) {}
-  
-  const base = typeof tex.rotation === 'number' ? tex.rotation : 0;
-  const delta = (quarterTurns || 0) * (Math.PI / 2);
-  let r = base + delta;
-  const twoPi = Math.PI * 2;
-  r = ((r % twoPi) + twoPi) % twoPi;
-  tex.rotation = r;
-  
-  tex.needsUpdate = true;
-  mat.needsUpdate = true;
+  // Calcula o quanto vamos adicionar (ex: -2 * 90 = -180 graus).
+  const deltaDegrees = (quarterTurns || 0) * 90;
+  const newDegrees = currentDegrees + deltaDegrees;
+
+  // Chama a nossa função principal para aplicar a nova rotação absoluta.
+  setLogoTextureRotation(modelRoot, instanceIndex, newDegrees);
 }
 
 export function setMaterialsVisibleByRole(modelRoot, roleKey, enabled) {
@@ -339,64 +319,109 @@ function getLogoInstanceKey(modelRoot, instanceIndex) {
 
 export function setLogoTextureRotation(modelRoot, instanceIndex, degrees) {
   if (!modelRoot) return;
-  
+
   const key = getLogoInstanceKey(modelRoot, instanceIndex);
   logosTextureRotations.set(key, degrees);
-  
-  // Apply the rotation to the texture
+
   const list = listRoleInstances(modelRoot, 'logos');
   const item = list[instanceIndex];
   if (!item) return;
-  
+
   const mat = ensureClonedMaterialFor(item.mesh, Array.isArray(item.mesh.material) ? item.materialIndex : item.mesh.material, '_clonedForRoleTexture');
   if (!mat || !('map' in mat) || !mat.map) return;
-  
+
   const tex = mat.map;
-  
-  // Get the actual center of the fitted texture using stored UV bounds
-  const uvCenter = getTextureUVCenter(tex);
-  
-  // PIVOT CUSTOMIZATION - Replace getTextureUVCenter with:
-  // const uvCenter = getFixedCenter(tex);        // Option 1: Always center
-  // const uvCenter = getCustomPivot(tex);        // Option 2: Custom point  
-  // const uvCenter = getTopLeftPivot(tex);       // Option 3: Top-left
-  
-  // Set the center for rotation
-  try { tex.center?.set?.(uvCenter.x, uvCenter.y); } catch (_) {}
-  
-  // Convert degrees to radians and apply rotation
   const radians = (degrees * Math.PI) / 180;
-  tex.rotation = radians;
+
+  // --- INÍCIO DA SOLUÇÃO COM MATRIZ ---
+
+  // Desativamos a atualização automática, pois vamos controlar a matriz manualmente.
+  tex.matrixAutoUpdate = false;
+
+  // Pegamos os valores de offset e repeat que já foram calculados para encaixar a textura.
+  const offsetX = tex.offset.x;
+  const offsetY = tex.offset.y;
+  const repeatX = tex.repeat.x;
+  const repeatY = tex.repeat.y;
+  const rotationCenter = 0.5; // O centro da imagem é sempre 0.5
+
+  // Criamos as matrizes de transformação para cada operação.
+  const scaleMatrix = new THREE.Matrix3().makeScale(repeatX, repeatY);
+  const translationMatrix = new THREE.Matrix3().makeTranslation(offsetX, offsetY);
   
-  tex.needsUpdate = true;
+  // Matriz de rotação em torno do centro (0.5, 0.5)
+  const rotationMatrix = new THREE.Matrix3();
+  const s = Math.sin(radians);
+  const c = Math.cos(radians);
+  const tx = -rotationCenter * c + rotationCenter * s + rotationCenter;
+  const ty = -rotationCenter * s - rotationCenter * c + rotationCenter;
+  rotationMatrix.set(
+     c, -s, tx,
+     s,  c, ty,
+     0,  0, 1
+  );
+
+  // Combinamos as matrizes na ordem correta:
+  // Primeiro, aplicamos a escala e o offset para "encaixar" a textura.
+  // Depois, aplicamos a rotação na textura já encaixada.
+  tex.matrix
+    .multiplyMatrices(rotationMatrix, translationMatrix)
+    .multiply(scaleMatrix);
+  
   mat.needsUpdate = true;
+
+  // --- FIM DA SOLUÇÃO COM MATRIZ ---
   
-  console.log(`[LOGOS] Instance ${instanceIndex} texture rotated: ${degrees}° (${radians.toFixed(3)} rad) - Center: (${uvCenter.x.toFixed(3)}, ${uvCenter.y.toFixed(3)})`);
+  console.log(`[LOGOS] Instance ${instanceIndex} texture rotated: ${degrees}°`);
 }
 
 export function getLogoTextureRotation(modelRoot, instanceIndex) {
   const key = getLogoInstanceKey(modelRoot, instanceIndex);
-  return logosTextureRotations.get(key) || 0;
+  const savedRotation = logosTextureRotations.get(key);
+  
+  // Se não há rotação salva, retorna a rotação padrão para a instância
+  if (savedRotation === undefined) {
+    return getDefaultRotation(instanceIndex);
+  }
+  
+  return savedRotation;
+}
+
+// Rotações padrão por instância (em graus)
+const DEFAULT_ROTATIONS = {
+  0: 90,  // lateral - motorista
+  1: 90,  // lateral - passageiro  
+  2: 180, // traseira
+  3: 0    // frente (sem rotação)
+};
+
+export function getDefaultRotation(instanceIndex) {
+  return DEFAULT_ROTATIONS[instanceIndex] || 0;
+}
+
+export function applyDefaultLogoRotations(modelRoot) {
+  if (!modelRoot) return;
+  
+  console.log('[LOGOS] Applying default rotations for all instances');
+  
+  // Aplicar rotações padrão para cada instância
+  for (let i = 0; i < 4; i++) {
+    const defaultRotation = getDefaultRotation(i);
+    if (defaultRotation !== 0) {
+      setLogoTextureRotation(modelRoot, i, defaultRotation);
+      console.log(`[LOGOS] Applied default rotation ${defaultRotation}° to instance ${i}`);
+    }
+  }
 }
 
 export function resetLogoTextureRotation(modelRoot, instanceIndex) {
   if (!modelRoot) return;
+
+  // Pega a rotação padrão para a instância.
+  const defaultRotation = getDefaultRotation(instanceIndex);
   
-  const key = getLogoInstanceKey(modelRoot, instanceIndex);
-  logosTextureRotations.set(key, 0);
+  // Usa a função principal para aplicar a rotação padrão.
+  setLogoTextureRotation(modelRoot, instanceIndex, defaultRotation);
   
-  // Reset texture rotation
-  const list = listRoleInstances(modelRoot, 'logos');
-  const item = list[instanceIndex];
-  if (!item) return;
-  
-  const mat = ensureClonedMaterialFor(item.mesh, Array.isArray(item.mesh.material) ? item.materialIndex : item.mesh.material, '_clonedForRoleTexture');
-  if (!mat || !('map' in mat) || !mat.map) return;
-  
-  const tex = mat.map;
-  tex.rotation = 0;
-  tex.needsUpdate = true;
-  mat.needsUpdate = true;
-  
-  console.log(`[LOGOS] Instance ${instanceIndex} texture rotation reset`);
+  console.log(`[LOGOS] Instance ${instanceIndex} texture rotation reset to default: ${defaultRotation}°`);
 }
