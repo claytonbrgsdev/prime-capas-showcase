@@ -13,7 +13,7 @@ import { initializeCamera, enforceCameraDistanceClamp as clampCameraDistance, up
 import { createCinematicController } from './camera_cinematic.js';
 import { applyColorToModel as applyColorToModelExt, applyColorToSpecificTarget as applyColorToSpecificTargetExt, disableMapForSpecificTarget as disableMapForSpecificTargetExt, applyLineColor as applyLineColorExt } from './materials/core.js';
 import { removeDefaultTextureMapsFromModel as removeDefaultTextureMapsFromModelExt } from './materials/baked.js';
-import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialNames as getAllMaterialNamesExt, setMaterialRoleMatchers as setMaterialRoleMatchersExt, applyTextureToRole as applyTextureToRoleExt, applyColorToRole as applyColorToRoleExt, getRoleInstanceCount as getRoleInstanceCountExt, setRoleInstanceVisible as setRoleInstanceVisibleExt, rotateRoleInstance as rotateRoleInstanceExt } from './materials/regions.js';
+import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialNames as getAllMaterialNamesExt, setMaterialRoleMatchers as setMaterialRoleMatchersExt, applyTextureToRole as applyTextureToRoleExt, applyColorToRole as applyColorToRoleExt, getRoleInstanceCount as getRoleInstanceCountExt, setRoleInstanceVisible as setRoleInstanceVisibleExt, rotateRoleInstance as rotateRoleInstanceExt, listRoleInstances } from './materials/regions.js';
 
 // ===== LOGOS Debug System =====
 function LOGOS_LOG(type, msg, data) {
@@ -24,6 +24,9 @@ function LOGOS_LOG(type, msg, data) {
 
 // Expose debug helper in dev environment
 try { window.LOGOS_SET_DEBUG = (v) => localStorage.setItem('LOGOS_DEBUG', v ? '1' : '0'); } catch(_) {}
+
+// Expose listRoleInstances for LOGOS functions
+try { window.__logos_listInstances = (modelRoot) => listRoleInstances(modelRoot, 'logos'); } catch(_) {}
 
 // ===== LOGOS Instance Management =====
 function logosInstanceSignature(item) {
