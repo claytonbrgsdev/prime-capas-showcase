@@ -65,6 +65,24 @@ function logosSetRotationQ(modelRoot, idx, targetQ){
   logosLogTexState(idx, it.material?.map);
 }
 
+// ===== LOGOS Post-Upload Reapplication =====
+function applyDefaultsForLogos(modelRoot){
+  const list = window.__logos_listInstances ? window.__logos_listInstances(modelRoot) : [];
+  list.forEach((it, idx) => {
+    const sig = logosInstanceSignature(it);
+    let pref = null; try { pref = JSON.parse(localStorage.getItem('logos:pref:'+sig) || 'null'); } catch(_){}
+    const tex = it.material?.map; if (!tex) return;
+    if (pref && Number.isFinite(pref.rotationQ)) {
+      const current = logosRadToQ(tex.rotation||0);
+      const delta = ((pref.rotationQ - current)%4 + 4)%4;
+      if (delta) rotateRoleInstanceExt(modelRoot, 'logos', idx, delta);
+    }
+    if (pref && typeof pref.flipY === 'number') { tex.flipY = !!pref.flipY; tex.needsUpdate = true; }
+    // padPercent opcional (se usar refit custom)
+    logosLogTexState(idx, tex, { loadedPref: !!pref });
+  });
+}
+
 (function () {
   // ===== App State =====
   /** @type {THREE.WebGLRenderer} */
@@ -710,6 +728,8 @@ function logosSetRotationQ(modelRoot, idx, targetQ){
           applyTextureToRole('tras', url, { anisotropy: 8, flipY: false });
           applyTextureToRole('lateral1', url, { anisotropy: 8, flipY: false });
           applyTextureToRole('lateral2', url, { anisotropy: 8, flipY: false });
+          // LOGOS: Reagendar reaplicação de defaults após TextureLoader
+          setTimeout(() => { try { applyDefaultsForLogos(modelRoot); } catch(_){} }, 50);
         } finally {
           try { pngUploadEl.value = ''; } catch (_) {}
         }
@@ -854,6 +874,9 @@ function logosSetRotationQ(modelRoot, idx, targetQ){
         
         // LOGOS: Log instance mapping após modelo carregado/ready
         try { logosLogInstanceMap(modelRoot); } catch (_) {}
+        
+        // LOGOS: Bootstrap - aplicar defaults após primeiro carregamento
+        setTimeout(() => { try { applyDefaultsForLogos(modelRoot); } catch(_){} }, 100);
         
         frameObject3D(modelRoot);
         
