@@ -111,6 +111,8 @@ function logosLogTexState(idx, tex, extras={}) {
   let logoInst0Visible = null, logoInst1Visible = null, logoInst2Visible = null, logoInst3Visible = null;
   /** @type {HTMLButtonElement | null} */
   let logoInst0RotCCW = null, logoInst0RotCW = null, logoInst1RotCCW = null, logoInst1RotCW = null, logoInst2RotCCW = null, logoInst2RotCW = null, logoInst3RotCCW = null, logoInst3RotCW = null;
+  /** @type {HTMLButtonElement | null} */
+  let logoInst0Reset = null, logoInst1Reset = null, logoInst2Reset = null, logoInst3Reset = null;
   // Expose refresher so we can call it after model load
   let refreshLogosControlsAvailability = null;
   
@@ -606,6 +608,10 @@ function logosLogTexState(idx, tex, extras={}) {
     logoInst2RotCW  = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst2RotCW'));
     logoInst3RotCCW = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst3RotCCW'));
     logoInst3RotCW  = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst3RotCW'));
+    logoInst0Reset = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst0Reset'));
+    logoInst1Reset = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst1Reset'));
+    logoInst2Reset = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst2Reset'));
+    logoInst3Reset = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst3Reset'));
     const initialModelUrl = (modelSelectEl && modelSelectEl.value) || './assets/models/kosha4/teste14.glb';
     console.log('[loader] loading', initialModelUrl);
     loadGltfModel(initialModelUrl, (p) => overlay.setProgress(p), () => overlay.hide());
@@ -646,14 +652,14 @@ function logosLogTexState(idx, tex, extras={}) {
         const count = getRoleInstanceCountExt(modelRoot, 'logos');
         if (!count || count <= 0) return; // don't disable controls before model is ready
         const setEnabled = (el, on) => { if (!el) return; el.disabled = !on; };
-        setEnabled(logoInst0Visible, count > 0); setEnabled(logoInst0RotCCW, count > 0); setEnabled(logoInst0RotCW, count > 0);
-        setEnabled(logoInst1Visible, count > 1); setEnabled(logoInst1RotCCW, count > 1); setEnabled(logoInst1RotCW, count > 1);
-        setEnabled(logoInst2Visible, count > 2); setEnabled(logoInst2RotCCW, count > 2); setEnabled(logoInst2RotCW, count > 2);
-        setEnabled(logoInst3Visible, count > 3); setEnabled(logoInst3RotCCW, count > 3); setEnabled(logoInst3RotCW, count > 3);
+        setEnabled(logoInst0Visible, count > 0); setEnabled(logoInst0RotCCW, count > 0); setEnabled(logoInst0RotCW, count > 0); setEnabled(logoInst0Reset, count > 0);
+        setEnabled(logoInst1Visible, count > 1); setEnabled(logoInst1RotCCW, count > 1); setEnabled(logoInst1RotCW, count > 1); setEnabled(logoInst1Reset, count > 1);
+        setEnabled(logoInst2Visible, count > 2); setEnabled(logoInst2RotCCW, count > 2); setEnabled(logoInst2RotCW, count > 2); setEnabled(logoInst2Reset, count > 2);
+        setEnabled(logoInst3Visible, count > 3); setEnabled(logoInst3RotCCW, count > 3); setEnabled(logoInst3RotCW, count > 3); setEnabled(logoInst3Reset, count > 3);
       } catch (_) {}
     };
 
-    const bindLogoInstanceControls = (idx, cbVisible, btnCCW, btnCW) => {
+    const bindLogoInstanceControls = (idx, cbVisible, btnCCW, btnCW, btnReset) => {
       // Only rotate the specific logos instance, not the side roles which may be interfering
       const setVisible = (on) => {
         setRoleInstanceVisibleExt(modelRoot, 'logos', idx, !!on);
@@ -662,14 +668,15 @@ function logosLogTexState(idx, tex, extras={}) {
         rotateRoleInstanceExt(modelRoot, 'logos', idx, qt);
       };
       if (cbVisible) cbVisible.addEventListener('change', () => setVisible(!!cbVisible.checked));
-      // Use 180° rotation steps to avoid UV-fit distortions that appear at 90°
-      if (btnCCW) btnCCW.addEventListener('click', () => rotate(-2));
-      if (btnCW)  btnCW.addEventListener('click',  () => rotate(+2));
+      // Use 90° rotation steps (quarter-turns) as per LOGOS methodology
+      if (btnCCW) btnCCW.addEventListener('click', () => rotate(-1));
+      if (btnCW)  btnCW.addEventListener('click',  () => rotate(+1));
+      if (btnReset) btnReset.addEventListener('click', () => logosSetRotationQ(modelRoot, idx, 0));
     };
-    bindLogoInstanceControls(0, logoInst0Visible, logoInst0RotCCW, logoInst0RotCW);
-    bindLogoInstanceControls(1, logoInst1Visible, logoInst1RotCCW, logoInst1RotCW);
-    bindLogoInstanceControls(2, logoInst2Visible, logoInst2RotCCW, logoInst2RotCW);
-    bindLogoInstanceControls(3, logoInst3Visible, logoInst3RotCCW, logoInst3RotCW);
+    bindLogoInstanceControls(0, logoInst0Visible, logoInst0RotCCW, logoInst0RotCW, logoInst0Reset);
+    bindLogoInstanceControls(1, logoInst1Visible, logoInst1RotCCW, logoInst1RotCW, logoInst1Reset);
+    bindLogoInstanceControls(2, logoInst2Visible, logoInst2RotCCW, logoInst2RotCW, logoInst2Reset);
+    bindLogoInstanceControls(3, logoInst3Visible, logoInst3RotCCW, logoInst3RotCW, logoInst3Reset);
 
     
     // PNG upload handler: apply to LOGOS role (and also front/back/lat roles for backward compat)

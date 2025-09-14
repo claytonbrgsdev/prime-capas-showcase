@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Three.js Sphere (Vanilla)</title>
+    <meta name="description" content="Simple Three.js scene rendering a sphere with vanilla JS." />
+    <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+    <noscript>Você precisa habilitar JavaScript para ver esta página.</noscript>
+
+    <div id="app">
+        <aside id="sidebar" aria-label="Painel de controles">
+            <h1>Controles</h1>
+            <hr />
+            <div class="control">
+                <label for="scenarioSelect">Escolha o cenário</label>
+                <select id="scenarioSelect">
+                    <option value="modern_garage">Galpão</option>
+                    <option value="sci-fi_garage" selected>Show Room</option>
+                    <option value="garageshowroom_vr_ready">Garage Showroom (VR Ready)</option>
+                </select>
+            </div>
+            <div class="control">
+                <label for="modelSelect">Modelo</label>
+                <select id="modelSelect">
+                    <option value="./assets/models/kosha4/teste7.glb">Kosha4 teste 7 (GLB)</option>
+                    <option value="./assets/models/kosha4/teste10.glb">Kosha4 teste 10 (GLB)</option>
+                    <option value="./assets/models/kosha4/teste11.glb">Kosha4 teste 11 (GLB)</option>
+                    <option value="./assets/models/kosha4/teste12.glb">Kosha4 teste 12 (GLB)</option>
+                    <option value="./assets/models/kosha4/teste13.glb">Kosha4 teste 13 (GLB)</option>
+                    <option value="./assets/models/kosha4/teste14.glb" selected>Kosha4 teste 14 (GLB)</option>
+                    <option value="./assets/models/kosha4/jetski6.glb">Jetski 6 (GLB)</option>
+                </select>
+            </div>
+            <hr />
+            <div class="control">
+                <label for="pngUpload">Aplicar PNG (Frente/Trás/Lateral 1/2)</label>
+                <input id="pngUpload" type="file" accept="image/png" />
+            </div>
+            <div class="control">
+                <label for="logoColor">Cor do LOGO/LOGOS</label>
+                <input id="logoColor" type="color" value="#ffffff" />
+            </div>
+            <hr />
+            <h2>LOGOS (4 instâncias)</h2>
+            <div id="logosControls" class="control" style="gap:10px">
+                <div class="row" style="grid-template-columns:auto 1fr auto auto auto auto; gap:8px">
+                    <label><input id="logoInst0Visible" type="checkbox" checked /> lateral - motorista</label>
+                    <span></span>
+                    <button id="logoInst0RotCCW" type="button">↺ 90°</button>
+                    <button id="logoInst0RotCW" type="button">↻ 90°</button>
+                    <button id="logoInst0Reset" type="button">Reset</button>
+                </div>
+                <div class="row" style="grid-template-columns:auto 1fr auto auto auto auto; gap:8px">
+                    <label><input id="logoInst1Visible" type="checkbox" checked /> lateral - passageiro</label>
+                    <span></span>
+                    <button id="logoInst1RotCCW" type="button">↺ 90°</button>
+                    <button id="logoInst1RotCW" type="button">↻ 90°</button>
+                    <button id="logoInst1Reset" type="button">Reset</button>
+                </div>
+                <div class="row" style="grid-template-columns:auto 1fr auto auto auto auto; gap:8px">
+                    <label><input id="logoInst2Visible" type="checkbox" checked /> traseira</label>
+                    <span></span>
+                    <button id="logoInst2RotCCW" type="button">↺ 90°</button>
+                    <button id="logoInst2RotCW" type="button">↻ 90°</button>
+                    <button id="logoInst2Reset" type="button">Reset</button>
+                </div>
+                <div class="row" style="grid-template-columns:auto 1fr auto auto auto auto; gap:8px">
+                    <label><input id="logoInst3Visible" type="checkbox" checked /> dianteira</label>
+                    <span></span>
+                    <button id="logoInst3RotCCW" type="button">↺ 90°</button>
+                    <button id="logoInst3RotCW" type="button">↻ 90°</button>
+                    <button id="logoInst3Reset" type="button">Reset</button>
+                </div>
+            </div>
+        </aside>
+        <div id="viewport" aria-label="Three.js viewport"></div>
+    </div>
+
+    <div id="loadingOverlay" aria-live="polite" role="status">
+        <div class="loader-box">
+            <div class="spinner" aria-hidden="true"></div>
+            <div id="loadingText">Carregando… 0%</div>
+        </div>
+    </div>
+
+    <!-- Import map to resolve bare specifiers used by Three.js addons -->
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+    </script>
+
+    <!-- App as ES module -->
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
+
