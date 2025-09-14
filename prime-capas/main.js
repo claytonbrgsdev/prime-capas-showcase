@@ -89,12 +89,16 @@ function __logos_sig(it){ return (typeof logosInstanceSignature === 'function') 
 function __logos_qFromRad(rad){ const t=Math.PI*2; const r=((rad%t)+t)%t; return Math.round(r/(Math.PI/2))%4; }
 
 function LOGOS_QA_map(){
+  const modelRoot = window.__logos_modelRoot;
+  if (!modelRoot) { console.error('❌ modelRoot não disponível. Aguarde o modelo carregar.'); return []; }
   const rows = logosLogInstanceMap ? logosLogInstanceMap(modelRoot) : [];
   LOGOS_LOG && LOGOS_LOG('qa','map captured', {count: rows.length});
   return rows;
 }
 
 function LOGOS_QA_saveFromCurrent(){
+  const modelRoot = window.__logos_modelRoot;
+  if (!modelRoot) { console.error('❌ modelRoot não disponível.'); return false; }
   const list = __logos_list(modelRoot);
   const rows = JSON.parse(localStorage.getItem('logos:map:v1') || '[]');
   rows.forEach((r) => {
@@ -121,10 +125,16 @@ function LOGOS_QA_setPrefsByIdx(mapping){
 }
 
 /** Reaplica prefs imediatamente (útil para QA manual) */
-function LOGOS_QA_reapply(){ try { applyDefaultsForLogos(modelRoot); LOGOS_LOG && LOGOS_LOG('qa','reapply-called'); } catch(_) {} return true; }
+function LOGOS_QA_reapply(){ 
+  const modelRoot = window.__logos_modelRoot;
+  if (!modelRoot) { console.error('❌ modelRoot não disponível.'); return false; }
+  try { applyDefaultsForLogos(modelRoot); LOGOS_LOG && LOGOS_LOG('qa','reapply-called'); } catch(_) {} return true; 
+}
 
 /** Verificação rígida: q atual vs esperado + centro UV vs center do texture */
 function LOGOS_QA_verify(tolerance=1e-3){
+  const modelRoot = window.__logos_modelRoot;
+  if (!modelRoot) { console.error('❌ modelRoot não disponível.'); return {pass:0, fail:0, total:0, details:[]}; }
   const list = __logos_list(modelRoot);
   const rows = JSON.parse(localStorage.getItem('logos:map:v1') || '[]');
   const out = [];
@@ -1090,6 +1100,9 @@ try {
 
     scene.add(wrapper);
     modelRoot = wrapper;
+    
+    // LOGOS QA: Expor modelRoot globalmente para helpers QA
+    try { window.__logos_modelRoot = modelRoot; } catch(_) {}
 
     updateFloorUnderModel();
     // Provisional placement to reduce visible snap when scenario loads
