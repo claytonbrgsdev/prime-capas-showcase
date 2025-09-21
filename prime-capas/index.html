@@ -14,130 +14,212 @@
         <aside id="sidebar" aria-label="Painel de controles">
             <h1>Controles</h1>
             <hr />
-            <div class="control">
-                <label>Escolha o cenário</label>
-                <div id="scenarioButtons" class="segmented-row">
-                    <button class="seg-btn active" data-key="none" aria-pressed="true">Sem cenário</button>
-                    <button class="seg-btn" data-key="modern_garage" aria-pressed="false">Galpão</button>
-                    <button class="seg-btn" data-key="sci-fi_garage" aria-pressed="false">Show Room</button>
-                    <button class="seg-btn" data-key="garageshowroom_vr_ready" aria-pressed="false">Garage Showroom (VR Ready)</button>
-                </div>
-            </div>
-            <div class="control">
-                <label>Modelo</label>
-                <div id="modelButtons" class="segmented-row">
-                    <button class="seg-btn" data-url="./assets/models/kosha4/teste7.glb" aria-pressed="false">Kosha4 teste 7 (GLB)</button>
-                    <button class="seg-btn" data-url="./assets/models/kosha4/teste10.glb" aria-pressed="false">Kosha4 teste 10 (GLB)</button>
-                    <button class="seg-btn" data-url="./assets/models/kosha4/teste11.glb" aria-pressed="false">Kosha4 teste 11 (GLB)</button>
-                    <button class="seg-btn" data-url="./assets/models/kosha4/teste12.glb" aria-pressed="false">Kosha4 teste 12 (GLB)</button>
-                    <button class="seg-btn" data-url="./assets/models/kosha4/teste13.glb" aria-pressed="false">Kosha4 teste 13 (GLB)</button>
-                    <button class="seg-btn active" data-url="./assets/models/kosha4/teste14.glb" aria-pressed="true">Kosha4 teste 14 (GLB)</button>
-                    <button class="seg-btn" data-url="./assets/models/kosha4/jetski6.glb" aria-pressed="false">Jetski 6 (GLB)</button>
-                </div>
-            </div>
-            <hr />
-            <div class="control">
-                <label>Cor das Linhas</label>
-                <div id="lineColorSwatches" class="swatch-row">
-                    <button class="swatch-btn active" data-hex="#666666" aria-pressed="true" aria-label="Preta" title="Preta" style="--swatch:#666666"></button>
-                    <button class="swatch-btn" data-hex="#4169E1" aria-pressed="false" aria-label="Azul royal" title="Azul royal" style="--swatch:#4169E1"></button>
-                    <button class="swatch-btn" data-hex="#849B88" aria-pressed="false" aria-label="Verde musgo" title="Verde musgo" style="--swatch:#849B88"></button>
-                    <button class="swatch-btn" data-hex="#FF0000" aria-pressed="false" aria-label="Vermelho" title="Vermelho" style="--swatch:#FF0000"></button>
-                    <button class="swatch-btn" data-hex="#5E63BC" aria-pressed="false" aria-label="Azul marinho" title="Azul marinho" style="--swatch:#5E63BC"></button>
-                    <button class="swatch-btn" data-hex="#808080" aria-pressed="false" aria-label="Cinza" title="Cinza" style="--swatch:#808080"></button>
-                </div>
-            </div>
-            <div class="control">
-                <label>Cor da CAPA</label>
-                <div id="capaColorSwatches" class="swatch-row">
-                    <button class="swatch-btn active" data-hex="#666666" aria-pressed="true" aria-label="Preta" title="Preta" style="--swatch:#666666"></button>
-                    <button class="swatch-btn" data-hex="#4169E1" aria-pressed="false" aria-label="Azul royal" title="Azul royal" style="--swatch:#4169E1"></button>
-                    <button class="swatch-btn" data-hex="#849B88" aria-pressed="false" aria-label="Verde musgo" title="Verde musgo" style="--swatch:#849B88"></button>
-                    <button class="swatch-btn" data-hex="#FF0000" aria-pressed="false" aria-label="Vermelho" title="Vermelho" style="--swatch:#FF0000"></button>
-                    <button class="swatch-btn" data-hex="#5E63BC" aria-pressed="false" aria-label="Azul marinho" title="Azul marinho" style="--swatch:#5E63BC"></button>
-                    <button class="swatch-btn" data-hex="#808080" aria-pressed="false" aria-label="Cinza" title="Cinza" style="--swatch:#808080"></button>
-                </div>
-            </div>
-            <div class="control">
-                <label for="pngUpload">Aplicar PNG (Frente/Trás/Lateral 1/2)</label>
-                <input id="pngUpload" type="file" accept="image/png" />
-            </div>
-            <hr />
-            <div class="row" style="grid-template-columns: 1fr auto; align-items: center; margin-bottom: 8px;">
-                <h5 style="margin: 0;">LOGOS Debug</h5>
-                <button id="toggleLogosControlsBtn" type="button">Mostrar controles</button>
-            </div>
-            <div id="logosControls" class="control" style="gap:15px; display:none">
-                <!-- Instance 0 - Lateral Motorista -->
-                <div class="logo-instance-group" style="border: 1px solid rgba(148,163,184,0.15); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
-                    <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
-                        <label><input id="logoInst0Visible" type="checkbox" checked /> lateral - motorista</label>
-                        <span></span>
-                        <button id="logoInst0RotCCW" type="button">↺ 180°</button>
-                        <button id="logoInst0RotCW" type="button">↻ 180°</button>
-                    </div>
-                    <div class="rotation-sliders">
-                        <div class="slider-row">
-                            <label for="logoInst0Rot">Rotação:</label>
-                            <input id="logoInst0Rot" type="range" min="-180" max="180" value="0" step="1" />
-                            <span id="logoInst0RotValue">0°</span>
-                        </div>
+            <section class="control-group">
+                <div class="control">
+                    <label>Modelo</label>
+                    <div id="modelButtons" class="segmented-row model-grid">
+                        <button class="seg-btn" data-url="./assets/models/kosha4/teste7.glb" aria-pressed="false">Kosha4 teste 7 (GLB)</button>
+                        <button class="seg-btn" data-url="./assets/models/kosha4/teste10.glb" aria-pressed="false">Kosha4 teste 10 (GLB)</button>
+                        <button class="seg-btn" data-url="./assets/models/kosha4/teste11.glb" aria-pressed="false">Kosha4 teste 11 (GLB)</button>
+                        <button class="seg-btn" data-url="./assets/models/kosha4/teste12.glb" aria-pressed="false">Kosha4 teste 12 (GLB)</button>
+                        <button class="seg-btn" data-url="./assets/models/kosha4/teste13.glb" aria-pressed="false">Kosha4 teste 13 (GLB)</button>
+                        <button class="seg-btn active" data-url="./assets/models/kosha4/teste14.glb" aria-pressed="true">Kosha4 teste 14 (GLB)</button>
+                        <button class="seg-btn" data-url="./assets/models/kosha4/jetski6.glb" aria-pressed="false">Jetski 6 (GLB)</button>
                     </div>
                 </div>
-
-                <!-- Instance 1 - Lateral Passageiro -->
-                <div class="logo-instance-group" style="border: 1px solid rgba(148,163,184,0.15); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
-                    <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
-                        <label><input id="logoInst1Visible" type="checkbox" checked /> lateral - passageiro</label>
-                        <span></span>
-                        <button id="logoInst1RotCCW" type="button">↺ 180°</button>
-                        <button id="logoInst1RotCW" type="button">↻ 180°</button>
-                    </div>
-                    <div class="rotation-sliders">
-                        <div class="slider-row">
-                            <label for="logoInst1Rot">Rotação:</label>
-                            <input id="logoInst1Rot" type="range" min="-180" max="180" value="0" step="1" />
-                            <span id="logoInst1RotValue">0°</span>
-                        </div>
+            </section>
+            <section class="control-group">
+                <div class="control">
+                    <label>Cor das Linhas</label>
+                    <div id="lineColorSwatches" class="swatch-row trio">
+                        <button class="swatch-btn active" data-hex="#666666" aria-pressed="true" aria-label="Preta" title="Preta" style="--swatch:#666666"></button>
+                        <button class="swatch-btn" data-hex="#4169E1" aria-pressed="false" aria-label="Azul royal" title="Azul royal" style="--swatch:#4169E1"></button>
+                        <button class="swatch-btn" data-hex="#849B88" aria-pressed="false" aria-label="Verde musgo" title="Verde musgo" style="--swatch:#849B88"></button>
+                        <button class="swatch-btn" data-hex="#FF0000" aria-pressed="false" aria-label="Vermelho" title="Vermelho" style="--swatch:#FF0000"></button>
+                        <button class="swatch-btn" data-hex="#5E63BC" aria-pressed="false" aria-label="Azul marinho" title="Azul marinho" style="--swatch:#5E63BC"></button>
+                        <button class="swatch-btn" data-hex="#808080" aria-pressed="false" aria-label="Cinza" title="Cinza" style="--swatch:#808080"></button>
                     </div>
                 </div>
-
-                <!-- Instance 2 - Traseira -->
-                <div class="logo-instance-group" style="border: 1px solid rgba(148,163,184,0.15); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
-                    <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
-                        <label><input id="logoInst2Visible" type="checkbox" checked /> traseira</label>
-                        <span></span>
-                        <button id="logoInst2RotCCW" type="button">↺ 180°</button>
-                        <button id="logoInst2RotCW" type="button">↻ 180°</button>
-                    </div>
-                    <div class="rotation-sliders">
-                        <div class="slider-row">
-                            <label for="logoInst2Rot">Rotação:</label>
-                            <input id="logoInst2Rot" type="range" min="-180" max="180" value="0" step="1" />
-                            <span id="logoInst2RotValue">0°</span>
-                        </div>
+                <div class="control">
+                    <label>Cor da CAPA</label>
+                    <div id="capaColorSwatches" class="swatch-row trio">
+                        <button class="swatch-btn active" data-hex="#666666" aria-pressed="true" aria-label="Preta" title="Preta" style="--swatch:#666666"></button>
+                        <button class="swatch-btn" data-hex="#4169E1" aria-pressed="false" aria-label="Azul royal" title="Azul royal" style="--swatch:#4169E1"></button>
+                        <button class="swatch-btn" data-hex="#849B88" aria-pressed="false" aria-label="Verde musgo" title="Verde musgo" style="--swatch:#849B88"></button>
+                        <button class="swatch-btn" data-hex="#FF0000" aria-pressed="false" aria-label="Vermelho" title="Vermelho" style="--swatch:#FF0000"></button>
+                        <button class="swatch-btn" data-hex="#5E63BC" aria-pressed="false" aria-label="Azul marinho" title="Azul marinho"(style="--swatch:#5E63BC"></button>
+                        <button class="swatch-btn" data-hex="#808080" aria-pressed="false" aria-label="Cinza" title="Cinza" style="--swatch:#808080"></button>
                     </div>
                 </div>
-
-                <!-- Instance 3 - Dianteira -->
-                <div class="logo-instance-group" style="border: 1px solid rgba(148,163,184,0.15); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
-                    <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
-                        <label><input id="logoInst3Visible" type="checkbox" checked /> dianteira</label>
-                        <span></span>
-                        <button id="logoInst3RotCCW" type="button">↺ 180°</button>
-                        <button id="logoInst3RotCW" type="button">↻ 180°</button>
-                    </div>
-                    <div class="rotation-sliders">
-                        <div class="slider-row">
-                            <label for="logoInst3Rot">Rotação:</label>
-                            <input id="logoInst3Rot" type="range" min="-180" max="180" value="0" step="1" />
-                            <span id="logoInst3RotValue">0°</span>
-                        </div>
+            </section>
+            <section class="control-group">
+                <div class="control">
+                    <label for="pngUpload">Aplicar PNG (Frente/Trás/Lateral 1/2)</label>
+                    <input id="pngUpload" type="file" accept="image/png" />
+                </div>
+                <div class="control">
+                    <label>Exibir regiões da logo</label>
+                    <div class="logo-visibility-list">
+                        <label class="logo-visibility-item"><input id="logoUserInst0Visible" type="checkbox" checked /> Lateral - motorista</label>
+                        <label class="logo-visibility-item"><input id="logoUserInst1Visible" type="checkbox" checked /> Lateral - passageiro</label>
+                        <label class="logo-visibility-item"><input id="logoUserInst2Visible" type="checkbox" checked /> Traseira</label>
+                        <label class="logo-visibility-item"><input id="logoUserInst3Visible" type="checkbox" checked /> Dianteira</label>
                     </div>
                 </div>
-            </div>
+            </section>
         </aside>
-        <div id="viewport" aria-label="Three.js viewport"></div>
+        <div id="viewport" aria-label="Three.js viewport">
+            <div id="adminOverlay" class="admin-overlay" aria-label="Controles administrativos">
+                <details class="admin-shell" open>
+                    <summary>Admin</summary>
+                    <div class="admin-content">
+                        <section class="admin-section" aria-labelledby="adminCameraHeading">
+                            <div class="admin-section-header">
+                                <h2 id="adminCameraHeading">Câmera</h2>
+                                <div class="admin-section-actions">
+                                    <button id="toggleDofBtn" type="button">DOF</button>
+                                </div>
+                            </div>
+                            <div class="admin-subsection">
+                                <h3>Escolha o cenário</h3>
+                                <div id="scenarioButtons" class="segmented-row">
+                                    <button class="seg-btn active" data-key="none" aria-pressed="true">Sem cenário</button>
+                                    <button class="seg-btn" data-key="modern_garage" aria-pressed="false">Galpão</button>
+                                    <button class="seg-btn" data-key="sci-fi_garage" aria-pressed="false">Show Room</button>
+                                    <button class="seg-btn" data-key="garageshowroom_vr_ready" aria-pressed="false">Garage Showroom (VR Ready)</button>
+                                </div>
+                            </div>
+                            <div class="admin-subsection">
+                                <h3>Presets de câmera</h3>
+                                <label class="admin-field">
+                                    <span>Nome do preset</span>
+                                    <input id="camPresetNameInput" type="text" placeholder="Digite um nome" />
+                                </label>
+                                <label class="admin-field">
+                                    <span>Presets salvos</span>
+                                    <select id="camPresetSelect"></select>
+                                </label>
+                                <div class="admin-actions">
+                                    <button id="saveCamPresetBtn" type="button">Salvar</button>
+                                    <button id="loadCamPresetBtn" type="button">Carregar</button>
+                                    <button id="deleteCamPresetBtn" type="button">Excluir</button>
+                                </div>
+                                <div class="admin-actions">
+                                    <button id="exportCamPresetBtn" type="button">Exportar</button>
+                                    <button id="importCamPresetBtn" type="button">Importar</button>
+                                </div>
+                                <input id="importCamPresetFile" type="file" accept="application/json" style="display:none;" />
+                            </div>
+                        </section>
+
+                        <section class="admin-section" aria-labelledby="adminLightsHeading">
+                            <div class="admin-section-header">
+                                <h2 id="adminLightsHeading">Luzes</h2>
+                                <div class="admin-section-actions">
+                                    <button id="copySelectedLightBtn" type="button">Copiar luz</button>
+                                    <button id="adminRefocusBtn" type="button">Reposicionar câmera</button>
+                                </div>
+                            </div>
+                            <div id="lightsAdmin" class="admin-block"></div>
+                            <div class="admin-subsection">
+                                <h3>Presets de iluminação</h3>
+                                <label class="admin-field">
+                                    <span>Nome do preset</span>
+                                    <input id="presetNameInput" type="text" placeholder="Digite um nome" />
+                                </label>
+                                <label class="admin-field">
+                                    <span>Presets salvos</span>
+                                    <select id="presetSelect"></select>
+                                </label>
+                                <div class="admin-actions">
+                                    <button id="savePresetBtn" type="button">Salvar</button>
+                                    <button id="loadPresetBtn" type="button">Carregar</button>
+                                    <button id="deletePresetBtn" type="button">Excluir</button>
+                                </div>
+                                <div class="admin-actions">
+                                    <button id="exportPresetBtn" type="button">Exportar</button>
+                                    <button id="importPresetBtn" type="button">Importar</button>
+                                </div>
+                                <input id="importPresetFile" type="file" accept="application/json" style="display:none;" />
+                            </div>
+                            <div class="admin-subsection">
+                                <div class="admin-subsection-header">
+                                    <h3>Logos Debug</h3>
+                                    <div class="admin-subsection-actions">
+                                        <button id="toggleLogosControlsBtn" type="button">Mostrar controles</button>
+                                    </div>
+                                </div>
+                                <div id="logosControls" class="admin-block" style="display:none">
+                                    <div class="logo-instance-group">
+                                        <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
+                                            <label><input id="logoInst0Visible" type="checkbox" checked /> lateral - motorista</label>
+                                            <span></span>
+                                            <button id="logoInst0RotCCW" type="button">↺ 180°</button>
+                                            <button id="logoInst0RotCW" type="button">↻ 180°</button>
+                                        </div>
+                                        <div class="rotation-sliders">
+                                            <div class="slider-row">
+                                                <label for="logoInst0Rot">Rotação:</label>
+                                                <input id="logoInst0Rot" type="range" min="-180" max="180" value="0" step="1" />
+                                                <span id="logoInst0RotValue">0°</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="logo-instance-group">
+                                        <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
+                                            <label><input id="logoInst1Visible" type="checkbox" checked /> lateral - passageiro</label>
+                                            <span></span>
+                                            <button id="logoInst1RotCCW" type="button">↺ 180°</button>
+                                            <button id="logoInst1RotCW" type="button">↻ 180°</button>
+                                        </div>
+                                        <div class="rotation-sliders">
+                                            <div class="slider-row">
+                                                <label for="logoInst1Rot">Rotação:</label>
+                                                <input id="logoInst1Rot" type="range" min="-180" max="180" value="0" step="1" />
+                                                <span id="logoInst1RotValue">0°</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="logo-instance-group">
+                                        <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
+                                            <label><input id="logoInst2Visible" type="checkbox" checked /> traseira</label>
+                                            <span></span>
+                                            <button id="logoInst2RotCCW" type="button">↺ 180°</button>
+                                            <button id="logoInst2RotCW" type="button">↻ 180°</button>
+                                        </div>
+                                        <div class="rotation-sliders">
+                                            <div class="slider-row">
+                                                <label for="logoInst2Rot">Rotação:</label>
+                                                <input id="logoInst2Rot" type="range" min="-180" max="180" value="0" step="1" />
+                                                <span id="logoInst2RotValue">0°</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="logo-instance-group">
+                                        <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
+                                            <label><input id="logoInst3Visible" type="checkbox" checked /> dianteira</label>
+                                            <span></span>
+                                            <button id="logoInst3RotCCW" type="button">↺ 180°</button>
+                                            <button id="logoInst3RotCW" type="button">↻ 180°</button>
+                                        </div>
+                                        <div class="rotation-sliders">
+                                            <div class="slider-row">
+                                                <label for="logoInst3Rot">Rotação:</label>
+                                                <input id="logoInst3Rot" type="range" min="-180" max="180" value="0" step="1" />
+                                                <span id="logoInst3RotValue">0°</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </details>
+            </div>
+        </div>
     </div>
 
     <div id="loadingOverlay" aria-live="polite" role="status">

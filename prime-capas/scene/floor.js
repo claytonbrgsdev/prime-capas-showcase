@@ -20,11 +20,33 @@ export function createOrUpdateFloor(scene, modelRoot, existingFloorMesh = null) 
     floorMesh = new THREE.Mesh(geometry, material);
     floorMesh.rotation.x = -Math.PI / 2;
     floorMesh.receiveShadow = true;
+    floorMesh.visible = false;
+
+    const grid = new THREE.GridHelper(1, 40, 0x475569, 0x1f2937);
+    grid.name = 'DynamicFloorGrid';
+    const gridMaterials = Array.isArray(grid.material) ? grid.material : [grid.material];
+    for (const m of gridMaterials) {
+      if (!m) continue;
+      m.transparent = true;
+      m.opacity = 0.35;
+      m.depthWrite = false;
+    }
+    grid.visible = false;
+    grid.renderOrder = 1;
+    floorMesh.userData.gridHelper = grid;
+    scene.add(grid);
+
     scene.add(floorMesh);
   }
   floorMesh.visible = false;
   floorMesh.scale.set(scaledSizeX, scaledSizeZ, 1);
   floorMesh.position.set(center.x, floorY, center.z);
+
+  const grid = floorMesh.userData?.gridHelper;
+  if (grid) {
+    grid.scale.set(scaledSizeX, 1, scaledSizeZ);
+    grid.position.set(center.x, floorY + 0.001, center.z);
+  }
   return floorMesh;
 }
 

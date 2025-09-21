@@ -10,7 +10,6 @@ import { createLightsManager } from './lights_manager.js';
 import { createLoadingOverlay } from './overlay.js';
 import { createScenarioManager } from './scenarios.js';
 import { initializeCamera, enforceCameraDistanceClamp as clampCameraDistance, updateControlsTargetFromObject, frameObject, setPleasantCameraView as setPleasantView } from './camera.js';
-import { createCinematicController } from './camera_cinematic.js';
 import { applyColorToModel as applyColorToModelExt, applyColorToSpecificTarget as applyColorToSpecificTargetExt, disableMapForSpecificTarget as disableMapForSpecificTargetExt, applyLineColor as applyLineColorExt } from './materials/core.js';
 import { removeDefaultTextureMapsFromModel as removeDefaultTextureMapsFromModelExt } from './materials/baked.js';
 import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialNames as getAllMaterialNamesExt, setMaterialRoleMatchers as setMaterialRoleMatchersExt, applyTextureToRole as applyTextureToRoleExt, applyColorToRole as applyColorToRoleExt, getRoleInstanceCount as getRoleInstanceCountExt, setRoleInstanceVisible as setRoleInstanceVisibleExt, rotateRoleInstance as rotateRoleInstanceExt, setLogoTextureRotation, getLogoTextureRotation, resetLogoTextureRotation, applyDefaultLogoRotations, getDefaultRotation } from './materials/regions.js';
@@ -44,11 +43,12 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
   let scenarioManager = null;
   // Lights manager (widen scope for scenario hooks)
   let lightsManager = null;
-  // Cinematic camera state
+  // Postprocess state
   let composer = null; // EffectComposer
   let renderPass = null; // RenderPass
   let bokehPass = null; // BokehPass
-  let cinematic = null;
+  const defaultSceneBackground = 0x0b1220;
+  const noScenarioSceneBackground = 0xe5e7eb;
   /** @type {Record<string, number>} */
   const scenarioYOffsetDefaults = {
     none: 0,
@@ -90,6 +90,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
   // Per-instance UI elements
   /** @type {HTMLInputElement | null} */
   let logoInst0Visible = null, logoInst1Visible = null, logoInst2Visible = null, logoInst3Visible = null;
+  let logoUserInst0Visible = null, logoUserInst1Visible = null, logoUserInst2Visible = null, logoUserInst3Visible = null;
   /** @type {HTMLButtonElement | null} */
   let logoInst0RotCCW = null, logoInst0RotCW = null, logoInst1RotCCW = null, logoInst1RotCW = null, logoInst2RotCCW = null, logoInst2RotCW = null, logoInst3RotCCW = null, logoInst3RotCW = null;
   
@@ -136,12 +137,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
     // DOM refs
     viewportEl = document.getElementById('viewport');
     
-    const toggleCinematicBtn = /** @type {HTMLButtonElement} */ (document.getElementById('toggleCinematicBtn'));
-    const restartCinematicBtn = /** @type {HTMLButtonElement} */ (document.getElementById('restartCinematicBtn'));
-    const takesEditorEl = document.getElementById('takesEditor');
-    const applyTakesBtn = /** @type {HTMLButtonElement} */ (document.getElementById('applyTakesBtn'));
     const toggleDofBtn = /** @type {HTMLButtonElement} */ (document.getElementById('toggleDofBtn'));
-    const copyTakesBtn = /** @type {HTMLButtonElement} */ (document.getElementById('copyTakesBtn'));
     const camPresetNameInput = /** @type {HTMLInputElement} */ (document.getElementById('camPresetNameInput'));
     const camPresetSelect = /** @type {HTMLSelectElement} */ (document.getElementById('camPresetSelect'));
     const saveCamPresetBtn = /** @type {HTMLButtonElement} */ (document.getElementById('saveCamPresetBtn'));
@@ -174,7 +170,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
 
     // Scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b1220);
+    applySceneThemeForScenario(currentScenarioKey);
 
     // Scenario manager
     scenarioManager = createScenarioManager(scene);
@@ -209,69 +205,6 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
       bokehPass = res.bokehPass;
     }
 
-    // Cinematic controller
-    cinematic = createCinematicController(camera, controls);
-    cinematic.setBokehPass(bokehPass);
-    // Turbo orbit defaults for cinematic mode
-    try { cinematic.setOrbitParams({ speed: 0.6, radius: 3.8, elevation: 32, elevationSway: 6, dwellDriftSpeed: 0.35, radiusSwayAmp: 0.05, radiusSwayHz: 0.8 }); } catch (_) {}
-    try { cinematic.setFovPulse({ enabled: false, base: 55, amplitudeDeg: 0 }); } catch (_) {}
-    // Longer resume blend after manual drag (couple of seconds)
-    try { cinematic.setResumeBlendSeconds(3.0); } catch (_) {}
-    try {
-      // Turbo takes: quick cuts, wide FOV to keep context
-      // Explicit radiusFactor ensures consistent initial framing and DOF lock
-      cinematic.setTakes([
-        // Moderate elevation changes (80°–90°), varied zoom, subtle drift/sway per take
-        { azimuthDeg:  15, elevationDeg: 88, radiusFactor: 3.6, fovDeg: 68, dwellSeconds: 1.2, transitionSeconds: 0.7, driftRadPerSec: 0.22, radiusSwayAmp: 0.03, radiusSwayHz: 0.7 },
-        { azimuthDeg:  55, elevationDeg: 84, radiusFactor: 3.2, fovDeg: 64, dwellSeconds: 1.35, transitionSeconds: 0.85, driftRadPerSec: 0.18, radiusSwayAmp: 0.05, radiusSwayHz: 0.9 },
-        { azimuthDeg: 100, elevationDeg: 90, radiusFactor: 4.6, fovDeg: 76, dwellSeconds: 1.25, transitionSeconds: 0.75, driftRadPerSec: 0.28, radiusSwayAmp: 0.02, radiusSwayHz: 0.6 },
-        { azimuthDeg: 135, elevationDeg: 82, radiusFactor: 2.9, fovDeg: 58, dwellSeconds: 1.6,  transitionSeconds: 0.9,  driftRadPerSec: 0.16, radiusSwayAmp: 0.06, radiusSwayHz: 1.0 },
-        { azimuthDeg: 175, elevationDeg: 86, radiusFactor: 3.9, fovDeg: 70, dwellSeconds: 1.4,  transitionSeconds: 0.8,  driftRadPerSec: 0.24, radiusSwayAmp: 0.04, radiusSwayHz: 0.8 },
-        { azimuthDeg: 200, elevationDeg: 80, radiusFactor: 2.6, fovDeg: 56, dwellSeconds: 1.3,  transitionSeconds: 0.8,  driftRadPerSec: 0.12, radiusSwayAmp: 0.05, radiusSwayHz: 1.1 },
-        { azimuthDeg: 230, elevationDeg: 89, radiusFactor: 4.8, fovDeg: 78, dwellSeconds: 1.2,  transitionSeconds: 0.7,  driftRadPerSec: 0.3,  radiusSwayAmp: 0.015, radiusSwayHz: 0.5 },
-        { azimuthDeg: 265, elevationDeg: 85, radiusFactor: 3.3, fovDeg: 66, dwellSeconds: 1.35, transitionSeconds: 0.85, driftRadPerSec: 0.2,  radiusSwayAmp: 0.035, radiusSwayHz: 0.9 },
-        { azimuthDeg: 300, elevationDeg: 90, radiusFactor: 4.2, fovDeg: 74, dwellSeconds: 1.45, transitionSeconds: 0.8,  driftRadPerSec: 0.26, radiusSwayAmp: 0.025, radiusSwayHz: 0.7 },
-        { azimuthDeg: 330, elevationDeg: 83, radiusFactor: 2.8, fovDeg: 60, dwellSeconds: 1.25, transitionSeconds: 0.75, driftRadPerSec: 0.14, radiusSwayAmp: 0.06, radiusSwayHz: 1.2 },
-        { azimuthDeg: 355, elevationDeg: 87, radiusFactor: 3.7, fovDeg: 70, dwellSeconds: 1.2,  transitionSeconds: 0.7,  driftRadPerSec: 0.22, radiusSwayAmp: 0.03, radiusSwayHz: 0.8 },
-      ]);
-    } catch (_) {}
-    // Start with cinematic enabled by default
-    try {
-      cinematic.enable();
-      if (toggleCinematicBtn) toggleCinematicBtn.textContent = 'Stop cinematic camera';
-    } catch (_) {}
-
-    
-    // Allow temporary manual orbit while in cinematic mode: pause cinematic when pointer is down,
-    // resume with a smooth blend when released.
-    try {
-      renderer.domElement.addEventListener('pointerdown', () => {
-        if (!cinematic) return;
-        // Pause cinematic motion but keep it enabled (lights/DOF remain)
-        cinematic.setManualControlActive(true);
-        if (restartCinematicBtn) restartCinematicBtn.style.display = '';
-        if (controls) controls.enabled = true;
-      });
-      if (restartCinematicBtn) restartCinematicBtn.addEventListener('click', () => {
-        if (!cinematic) return;
-        // Resume cinematic motion smoothly
-        cinematic.setManualControlActive(false);
-        if (restartCinematicBtn) restartCinematicBtn.style.display = 'none';
-      });
-    } catch (_) {}
-    if (toggleCinematicBtn) {
-      toggleCinematicBtn.addEventListener('click', () => {
-        if (!cinematic) return;
-        if (cinematic.isEnabled()) {
-          cinematic.disable();
-          toggleCinematicBtn.textContent = 'Start cinematic camera';
-        } else {
-          cinematic.enable();
-          toggleCinematicBtn.textContent = 'Stop cinematic camera';
-        }
-      });
-    }
-
     // DOF toggle button
     if (toggleDofBtn) {
       toggleDofBtn.addEventListener('click', () => {
@@ -283,93 +216,22 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
       toggleDofBtn.textContent = (bokehPass && bokehPass.enabled) ? 'DOF: On' : 'DOF: Off';
     }
 
-    // ===== Camera Admin UI (takes + presets) =====
+    const captureCameraState = () => ({
+      position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
+      target: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
+      fov: camera.fov,
+    });
+    const applyCameraState = (state) => {
+      if (!state) return;
+      if (state.position) camera.position.set(state.position.x, state.position.y, state.position.z);
+      if (typeof state.fov === 'number') { camera.fov = state.fov; camera.updateProjectionMatrix(); }
+      if (state.target) { controls.target.set(state.target.x, state.target.y, state.target.z); controls.update(); }
+    };
+
+    // ===== Camera Admin (presets) =====
     function cameraStorageKey() { return `cam-presets:${currentScenarioKey || 'none'}`; }
     function readCamPresets() { try { return JSON.parse(localStorage.getItem(cameraStorageKey()) || '[]'); } catch { return []; } }
     function writeCamPresets(list) { try { localStorage.setItem(cameraStorageKey(), JSON.stringify(list)); } catch (_) {} }
-
-    function buildTakesEditor(container) {
-      if (!container) return;
-      while (container.firstChild) container.removeChild(container.firstChild);
-      const mkNumber = (label, min, max, step, value) => {
-        const row = document.createElement('div'); row.className = 'row';
-        const lab = document.createElement('label'); lab.textContent = label; row.appendChild(lab);
-        const input = document.createElement('input'); input.type = 'number'; input.min = String(min); input.max = String(max); input.step = String(step); input.value = String(value);
-        row.appendChild(input);
-        return { row, input };
-      };
-      // Order selector (indices 1..4)
-      const orderRow = document.createElement('div'); orderRow.className = 'row';
-      const orderLab = document.createElement('label'); orderLab.textContent = 'Ordem (1-4)'; orderRow.appendChild(orderLab);
-      const orderInput = document.createElement('input'); orderInput.type = 'text'; orderInput.placeholder = 'ex: 1,2,3,4'; orderInput.value = '1,2,3,4'; orderRow.appendChild(orderInput);
-      container.appendChild(orderRow);
-
-      const defaultTakes = [
-        { azimuthDeg:  15, elevationDeg: 88, radiusFactor: 3.6, fovDeg: 68, dwellSeconds: 1.2, transitionSeconds: 0.7, driftRadPerSec: 0.22, radiusSwayAmp: 0.03, radiusSwayHz: 0.7 },
-        { azimuthDeg:  55, elevationDeg: 84, radiusFactor: 3.2, fovDeg: 64, dwellSeconds: 1.35, transitionSeconds: 0.85, driftRadPerSec: 0.18, radiusSwayAmp: 0.05, radiusSwayHz: 0.9 },
-        { azimuthDeg: 100, elevationDeg: 90, radiusFactor: 4.6, fovDeg: 76, dwellSeconds: 1.25, transitionSeconds: 0.75, driftRadPerSec: 0.28, radiusSwayAmp: 0.02, radiusSwayHz: 0.6 },
-        { azimuthDeg: 135, elevationDeg: 82, radiusFactor: 2.9, fovDeg: 58, dwellSeconds: 1.6,  transitionSeconds: 0.9,  driftRadPerSec: 0.16, radiusSwayAmp: 0.06, radiusSwayHz: 1.0 },
-      ];
-      const editors = [];
-      for (let i = 0; i < 4; i++) {
-        const box = document.createElement('div');
-        box.style.border = '1px solid rgba(148,163,184,0.15)';
-        box.style.borderRadius = '6px';
-        box.style.padding = '8px';
-        box.style.marginBottom = '8px';
-        const title = document.createElement('div'); title.style.fontWeight = '600'; title.textContent = `Take ${i+1}`; box.appendChild(title);
-        const seed = defaultTakes[i] || defaultTakes[0];
-        const f = {};
-        f.az = mkNumber('Azimuth (°)', -360, 360, 1, seed.azimuthDeg);
-        f.el = mkNumber('Elevation (°)', 15, 90, 1, seed.elevationDeg);
-        f.rf = mkNumber('Radius factor', 0.1, 10, 0.01, seed.radiusFactor);
-        f.fov = mkNumber('FOV (°)', 20, 110, 1, seed.fovDeg);
-        f.dw = mkNumber('Dwell (s)', 0.1, 30, 0.05, seed.dwellSeconds);
-        f.tr = mkNumber('Transition (s)', 0.1, 10, 0.05, seed.transitionSeconds);
-        f.dr = mkNumber('Drift (rad/s)', 0, 1, 0.001, seed.driftRadPerSec);
-        f.sa = mkNumber('Radius sway amp', 0, 0.2, 0.001, seed.radiusSwayAmp);
-        f.sh = mkNumber('Radius sway Hz', 0, 5, 0.01, seed.radiusSwayHz);
-        for (const k of Object.keys(f)) box.appendChild(f[k].row);
-        container.appendChild(box);
-        editors.push({ box, f });
-      }
-      return { editors, orderInput };
-    }
-
-    const takesUI = buildTakesEditor(takesEditorEl);
-
-    function readTakesFromUI() {
-      if (!takesUI) return [];
-      const order = (takesUI.orderInput.value || '1,2,3,4').split(',').map((s) => Math.max(1, Math.min(4, Number(s.trim()) || 1)) - 1);
-      const unique = order.filter((_, idx) => order.indexOf(order[idx]) === idx);
-      const indices = (unique.length ? unique : [0,1,2,3]);
-      const takes = indices.map((i) => {
-        const f = takesUI.editors[i].f;
-        return {
-          azimuthDeg: Number(f.az.input.value),
-          elevationDeg: Number(f.el.input.value),
-          radiusFactor: Number(f.rf.input.value),
-          fovDeg: Number(f.fov.input.value),
-          dwellSeconds: Number(f.dw.input.value),
-          transitionSeconds: Number(f.tr.input.value),
-          driftRadPerSec: Number(f.dr.input.value),
-          radiusSwayAmp: Number(f.sa.input.value),
-          radiusSwayHz: Number(f.sh.input.value),
-        };
-      });
-      return takes;
-    }
-
-    if (applyTakesBtn) applyTakesBtn.addEventListener('click', () => {
-      try { cinematic.setTakes(readTakesFromUI()); } catch (_) {}
-      try { if (!cinematic.isEnabled()) cinematic.enable(); } catch (_) {}
-      if (toggleCinematicBtn) toggleCinematicBtn.textContent = 'Stop cinematic camera';
-    });
-    if (copyTakesBtn) copyTakesBtn.addEventListener('click', async () => {
-      const data = { scenario: currentScenarioKey, takes: readTakesFromUI() };
-      const text = JSON.stringify(data, null, 2);
-      try { await navigator.clipboard.writeText(text); } catch (_) {}
-    });
 
     function refreshCamPresetSelect() {
       if (!camPresetSelect) return;
@@ -381,8 +243,8 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
     }
     refreshCamPresetSelect();
     if (saveCamPresetBtn) saveCamPresetBtn.addEventListener('click', () => {
-      const name = (camPresetNameInput?.value || '').trim() || `takes-${Date.now()}`;
-      const preset = { name, takes: readTakesFromUI() };
+      const name = (camPresetNameInput?.value || '').trim() || `camera-${Date.now()}`;
+      const preset = { name, camera: captureCameraState() };
       const list = readCamPresets();
       const idx = list.findIndex((p) => p.name === name);
       if (idx >= 0) list[idx] = preset; else list.push(preset);
@@ -393,9 +255,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
       const name = camPresetSelect?.value; if (!name) return;
       const list = readCamPresets();
       const p = list.find((x) => x.name === name); if (!p) return;
-      try { cinematic.setTakes(p.takes || []); } catch (_) {}
-      try { if (!cinematic.isEnabled()) cinematic.enable(); } catch (_) {}
-      if (toggleCinematicBtn) toggleCinematicBtn.textContent = 'Stop cinematic camera';
+      applyCameraState(p.camera || null);
     });
     if (deleteCamPresetBtn) deleteCamPresetBtn.addEventListener('click', () => {
       const name = camPresetSelect?.value; if (!name) return;
@@ -418,16 +278,14 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
         try {
           const text = await file.text(); const preset = JSON.parse(text) || {};
           const nameFromFile = (file.name || '').replace(/\.[^.]+$/, '');
-          const name = (preset.name && String(preset.name).trim()) || nameFromFile || `takes-${Date.now()}`;
-          const normalized = { name, takes: Array.isArray(preset.takes) ? preset.takes : [] };
+          const name = (preset.name && String(preset.name).trim()) || nameFromFile || `camera-${Date.now()}`;
+          const normalized = { name, camera: preset.camera || null };
           const list = readCamPresets();
           const idx = list.findIndex((p) => p.name === normalized.name);
           if (idx >= 0) list[idx] = normalized; else list.push(normalized);
           writeCamPresets(list); refreshCamPresetSelect();
           if (camPresetSelect) camPresetSelect.value = normalized.name;
-          try { cinematic.setTakes(normalized.takes || []); } catch (_) {}
-          try { if (!cinematic.isEnabled()) cinematic.enable(); } catch (_) {}
-          if (toggleCinematicBtn) toggleCinematicBtn.textContent = 'Stop cinematic camera';
+          applyCameraState(normalized.camera || null);
         } catch (e) { console.warn('[camera] Failed to import preset:', e); }
         finally { try { importCamPresetFile.value = ''; } catch (_) {} }
       });
@@ -478,23 +336,9 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
       }
       refreshPresetSelect();
 
-      function captureCamera() {
-        return {
-          position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-          target: { x: controls.target.x, y: controls.target.y, z: controls.target.z },
-          fov: camera.fov,
-        };
-      }
-      function applyCamera(c) {
-        if (!c) return;
-        if (c.position) camera.position.set(c.position.x, c.position.y, c.position.z);
-        if (c.fov) { camera.fov = c.fov; camera.updateProjectionMatrix(); }
-        if (c.target) { controls.target.set(c.target.x, c.target.y, c.target.z); controls.update(); }
-      }
-
       if (savePresetBtn) savePresetBtn.addEventListener('click', () => {
         const name = (presetNameInput?.value || '').trim() || `preset-${Date.now()}`;
-        const preset = { name, lights: lightsManager.serializeLights(), camera: captureCamera() };
+        const preset = { name, lights: lightsManager.serializeLights(), camera: captureCameraState() };
         const list = readPresets();
         const idx = list.findIndex((p) => p.name === name);
         if (idx >= 0) list[idx] = preset; else list.push(preset);
@@ -508,7 +352,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
         const p = list.find((x) => x.name === name);
         if (!p) return;
         lightsManager.applyLightsFromSerialized(p.lights || []);
-        applyCamera(p.camera || null);
+        applyCameraState(p.camera || null);
         if (lightsAdminEl) lightsManager.buildLightsAdminUI(lightsAdminEl);
       });
       if (deletePresetBtn) deletePresetBtn.addEventListener('click', () => {
@@ -560,7 +404,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
             if (presetSelect) presetSelect.value = normalized.name;
             // Immediately apply
             try { lightsManager.applyLightsFromSerialized(normalized.lights || []); } catch (_) {}
-            try { applyCamera(normalized.camera || null); } catch (_) {}
+            try { applyCameraState(normalized.camera || null); } catch (_) {}
             if (lightsAdminEl) lightsManager.buildLightsAdminUI(lightsAdminEl);
           } catch (e) {
             console.warn('[presets] Failed to import preset:', e);
@@ -572,7 +416,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
       }
     } catch (_) {}
 
-    // Main lights only; no cinematic-only lights to keep consistent lighting
+    // Main lights only; keep consistent lighting
 
     // Loading overlay
     overlay = createLoadingOverlay();
@@ -595,6 +439,10 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
     logoInst1Visible = /** @type {HTMLInputElement} */ (document.getElementById('logoInst1Visible'));
     logoInst2Visible = /** @type {HTMLInputElement} */ (document.getElementById('logoInst2Visible'));
     logoInst3Visible = /** @type {HTMLInputElement} */ (document.getElementById('logoInst3Visible'));
+    logoUserInst0Visible = /** @type {HTMLInputElement} */ (document.getElementById('logoUserInst0Visible'));
+    logoUserInst1Visible = /** @type {HTMLInputElement} */ (document.getElementById('logoUserInst1Visible'));
+    logoUserInst2Visible = /** @type {HTMLInputElement} */ (document.getElementById('logoUserInst2Visible'));
+    logoUserInst3Visible = /** @type {HTMLInputElement} */ (document.getElementById('logoUserInst3Visible'));
     logoInst0RotCCW = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst0RotCCW'));
     logoInst0RotCW  = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst0RotCW'));
     logoInst1RotCCW = /** @type {HTMLButtonElement} */ (document.getElementById('logoInst1RotCCW'));
@@ -714,36 +562,58 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
         
         // Instance 0 controls
         setEnabled(logoInst0Visible, count > 0);
+        setEnabled(logoUserInst0Visible, count > 0);
         setEnabled(logoInst0RotCCW, count > 0); setEnabled(logoInst0RotCW, count > 0);
         setEnabled(logoInst0RotSlider, count > 0);
         
         // Instance 1 controls
         setEnabled(logoInst1Visible, count > 1);
+        setEnabled(logoUserInst1Visible, count > 1);
         setEnabled(logoInst1RotCCW, count > 1); setEnabled(logoInst1RotCW, count > 1);
         setEnabled(logoInst1RotSlider, count > 1);
         
         // Instance 2 controls
         setEnabled(logoInst2Visible, count > 2);
+        setEnabled(logoUserInst2Visible, count > 2);
         setEnabled(logoInst2RotCCW, count > 2); setEnabled(logoInst2RotCW, count > 2);
         setEnabled(logoInst2RotSlider, count > 2);
         
         // Instance 3 controls
         setEnabled(logoInst3Visible, count > 3);
+        setEnabled(logoUserInst3Visible, count > 3);
         setEnabled(logoInst3RotCCW, count > 3); setEnabled(logoInst3RotCW, count > 3);
         setEnabled(logoInst3RotSlider, count > 3);
       } catch (_) {}
+      applyLogoVisibilityFromUI();
     };
 
-    const bindLogoInstanceControls = (idx, cbVisible, btnCCW, btnCW, rotSlider, rotValue) => {
-      // Only rotate the specific logos instance, not the side roles which may be interfering
-      const setVisible = (on) => {
-        setRoleInstanceVisibleExt(modelRoot, 'logos', idx, !!on);
+    const bindLogoInstanceControls = (idx, visibilityCheckboxes, btnCCW, btnCW, rotSlider, rotValue) => {
+      const validCheckboxes = visibilityCheckboxes.filter(Boolean);
+
+      const syncCheckboxes = (value, source) => {
+        for (const cb of validCheckboxes) {
+          if (cb === source) continue;
+          cb.checked = value;
+        }
       };
+
+      const setVisible = (on, source) => {
+        const next = !!on;
+        syncCheckboxes(next, source);
+        if (modelRoot) setRoleInstanceVisibleExt(modelRoot, 'logos', idx, next);
+      };
+
       const rotate = (qt) => {
         rotateRoleInstanceExt(modelRoot, 'logos', idx, qt);
       };
-      
-      if (cbVisible) cbVisible.addEventListener('change', () => setVisible(!!cbVisible.checked));
+
+      for (const cb of validCheckboxes) {
+        cb.addEventListener('change', () => setVisible(cb.checked, cb));
+      }
+
+      const initialCheckbox = validCheckboxes[0];
+      if (initialCheckbox) setVisible(initialCheckbox.checked, initialCheckbox);
+
       // Use 180° rotation steps to avoid UV-fit distortions that appear at 90°
       if (btnCCW) btnCCW.addEventListener('click', () => rotate(-2));
       if (btnCW)  btnCW.addEventListener('click',  () => rotate(+2));
@@ -762,10 +632,11 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
         rotValue.textContent = `${defaultRotation}°`;
       }
     };
-    bindLogoInstanceControls(0, logoInst0Visible, logoInst0RotCCW, logoInst0RotCW, logoInst0RotSlider, logoInst0RotValue);
-    bindLogoInstanceControls(1, logoInst1Visible, logoInst1RotCCW, logoInst1RotCW, logoInst1RotSlider, logoInst1RotValue);
-    bindLogoInstanceControls(2, logoInst2Visible, logoInst2RotCCW, logoInst2RotCW, logoInst2RotSlider, logoInst2RotValue);
-    bindLogoInstanceControls(3, logoInst3Visible, logoInst3RotCCW, logoInst3RotCW, logoInst3RotSlider, logoInst3RotValue);
+    bindLogoInstanceControls(0, [logoInst0Visible, logoUserInst0Visible], logoInst0RotCCW, logoInst0RotCW, logoInst0RotSlider, logoInst0RotValue);
+    bindLogoInstanceControls(1, [logoInst1Visible, logoUserInst1Visible], logoInst1RotCCW, logoInst1RotCW, logoInst1RotSlider, logoInst1RotValue);
+    bindLogoInstanceControls(2, [logoInst2Visible, logoUserInst2Visible], logoInst2RotCCW, logoInst2RotCW, logoInst2RotSlider, logoInst2RotValue);
+    bindLogoInstanceControls(3, [logoInst3Visible, logoUserInst3Visible], logoInst3RotCCW, logoInst3RotCW, logoInst3RotSlider, logoInst3RotValue);
+    applyLogoVisibilityFromUI();
 
     
     // Reapply saved texture rotations after PNG upload (includes default rotations)
@@ -865,9 +736,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
     }
     // Per-scenario lights update hook
     try { lightsManager && lightsManager.update(0.016, modelRoot); } catch (_) {}
-    if (cinematic && cinematic.isEnabled()) {
-      // Approx delta since requestAnimationFrame gives timestamp in ms
-      cinematic.update(0.016, modelRoot);
+    if (composer) {
       composer.render();
     } else {
       renderer.render(scene, camera);
@@ -1000,9 +869,30 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
   function applyTextureToRole(roleKey, textureUrl, options) { if (!modelRoot) return; applyTextureToRoleExt(modelRoot, roleKey, textureUrl, options || {}); }
   function applyColorToRole(roleKey, hex, options) { if (!modelRoot) return; applyColorToRoleExt(modelRoot, roleKey, hex, options || {}); }
 
-  
+
 
   function applyLogoRegionsFromUI() { /* UI removed */ }
+
+  function applyLogoVisibilityFromUI() {
+    if (!modelRoot) return;
+    const groups = [
+      [logoInst0Visible, logoUserInst0Visible],
+      [logoInst1Visible, logoUserInst1Visible],
+      [logoInst2Visible, logoUserInst2Visible],
+      [logoInst3Visible, logoUserInst3Visible],
+    ];
+    groups.forEach((group, idx) => {
+      const activeCheckbox = group.find((cb) => cb);
+      if (!activeCheckbox) return;
+      setRoleInstanceVisibleExt(modelRoot, 'logos', idx, !!activeCheckbox.checked);
+    });
+  }
+
+  function updateFloorGridVisibility() {
+    const grid = floorMesh?.userData?.gridHelper;
+    if (!grid) return;
+    grid.visible = currentScenarioKey === 'none';
+  }
 
   // ===== Model: Normalize & Camera Bounds =====
   function normalizeAndAddToScene(root) {
@@ -1085,7 +975,11 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
 
   
 
-  function updateFloorUnderModel() { if (!modelRoot) return; floorMesh = createOrUpdateFloor(scene, modelRoot, floorMesh); }
+  function updateFloorUnderModel() {
+    if (!modelRoot) return;
+    floorMesh = createOrUpdateFloor(scene, modelRoot, floorMesh);
+    updateFloorGridVisibility();
+  }
 
 
   function snapModelToScenarioFloor() {
@@ -1112,6 +1006,8 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
   // ===== Scenario Management =====
   function setScenarioManaged(key, onProgress, onDone) {
     currentScenarioKey = key || 'none';
+    applySceneThemeForScenario(currentScenarioKey);
+    updateFloorGridVisibility();
     userYOffset = 0;
     modelYOffsetBase = 0;
     updateYOffsetUI();
@@ -1176,6 +1072,19 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
       modelRoot.position.set(0, 4.2, 0);
       updateFloorUnderModel();
       updateControlsTargetFromModel();
+    }
+  }
+
+  function applySceneThemeForScenario(key) {
+    if (!scene || !renderer) return;
+    if (!key || key === 'none') {
+      scene.background = new THREE.Color(noScenarioSceneBackground);
+      renderer.setClearColor(noScenarioSceneBackground, 1);
+      renderer.toneMappingExposure = 1.25;
+    } else {
+      scene.background = new THREE.Color(defaultSceneBackground);
+      renderer.setClearColor(0x000000, 0);
+      renderer.toneMappingExposure = 1.0;
     }
   }
 
