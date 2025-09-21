@@ -30,6 +30,10 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
   
   /** @type {HTMLSelectElement | null} */
   let modelSelectEl = null;
+  /** @type {HTMLElement | null} */
+  let scenarioButtons = null;
+  /** @type {HTMLElement | null} */
+  let modelButtons = null;
   
   // Removed global model color control
   /** @type {any | null} */
@@ -55,7 +59,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
     'sci-fi_garage': 0.0,
     'vr_moody_lighting_art_gallery_scene_06': 0.0
   };
-  let currentScenarioKey = 'sci-fi_garage';
+  let currentScenarioKey = 'none';
   let userYOffset = 0; // live override via UI
   let modelYOffsetBase = 0; // baseline after snapping to scenario floor
   // Loading overlay API
@@ -65,10 +69,18 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
   let updateReadouts = null;
 
   // Texture toggles UI removed
-  /** @type {HTMLInputElement | null} */
+  /** @type {HTMLInputElement | HTMLSelectElement | null} */
   let lineColorInputEl = null;
+  /** @type {HTMLElement | null} */
+  let lineColorSwatches = null;
+  /** @type {HTMLSelectElement | null} */
+  let capaColorSelectEl = null;
+  /** @type {HTMLElement | null} */
+  let capaColorSwatches = null;
   /** @type {HTMLInputElement | null} */
   let modelColorInputEl = null;
+  /** @type {HTMLButtonElement | null} */
+  let toggleLogosControlsBtn = null;
 
   // Logo regions UI removed; single PNG upload replaces it
   /** @type {HTMLInputElement | null} */
@@ -138,6 +150,11 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
     const exportCamPresetBtn = /** @type {HTMLButtonElement} */ (document.getElementById('exportCamPresetBtn'));
     const importCamPresetBtn = /** @type {HTMLButtonElement} */ (document.getElementById('importCamPresetBtn'));
     const importCamPresetFile = /** @type {HTMLInputElement} */ (document.getElementById('importCamPresetFile'));
+
+    scenarioButtons = document.getElementById('scenarioButtons');
+    const activeScenarioBtn = scenarioButtons?.querySelector('button.seg-btn.active');
+    const preselectedScenarioKey = activeScenarioBtn?.getAttribute('data-key');
+    if (preselectedScenarioKey) currentScenarioKey = preselectedScenarioKey;
     
     
     if (!viewportEl) throw new Error('Viewport element not found');
@@ -562,13 +579,17 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
     overlay.show();
     overlay.setProgress(0);
 
-    // Load model (from selector if present)
-    modelSelectEl = /** @type {HTMLSelectElement} */ (document.getElementById('modelSelect'));
-    lineColorInputEl = /** @type {HTMLInputElement} */ (document.getElementById('lineColorControl'));
+    // Load model (from segmented buttons if present)
+    modelButtons = document.getElementById('modelButtons');
+    lineColorInputEl = /** @type {HTMLInputElement | HTMLSelectElement} */ (null);
+    capaColorSelectEl = /** @type {HTMLSelectElement} */ (null);
+    lineColorSwatches = document.getElementById('lineColorSwatches');
+    capaColorSwatches = document.getElementById('capaColorSwatches');
     modelColorInputEl = /** @type {HTMLInputElement} */ (document.getElementById('modelColorControl'));
     // PNG upload control
     pngUploadEl = /** @type {HTMLInputElement} */ (document.getElementById('pngUpload'));
-    logoColorEl = /** @type {HTMLInputElement} */ (document.getElementById('logoColor'));
+    logoColorEl = /** @type {HTMLInputElement} */ (null);
+    toggleLogosControlsBtn = /** @type {HTMLButtonElement} */ (document.getElementById('toggleLogosControlsBtn'));
     // Per-instance refs
     logoInst0Visible = /** @type {HTMLInputElement} */ (document.getElementById('logoInst0Visible'));
     logoInst1Visible = /** @type {HTMLInputElement} */ (document.getElementById('logoInst1Visible'));
@@ -594,38 +615,94 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
     logoInst1RotValue = /** @type {HTMLSpanElement} */ (document.getElementById('logoInst1RotValue'));
     logoInst2RotValue = /** @type {HTMLSpanElement} */ (document.getElementById('logoInst2RotValue'));
     logoInst3RotValue = /** @type {HTMLSpanElement} */ (document.getElementById('logoInst3RotValue'));
-    const initialModelUrl = (modelSelectEl && modelSelectEl.value) || './assets/models/kosha4/teste14.glb';
+    const initialModelUrl = (document.querySelector('#modelButtons .seg-btn.active')?.getAttribute('data-url')) || './assets/models/kosha4/teste14.glb';
     console.log('[loader] loading', initialModelUrl);
     loadGltfModel(initialModelUrl, (p) => overlay.setProgress(p), () => overlay.hide());
 
     // UI events
     // Global model color UI removed
-    if (modelSelectEl) {
-      modelSelectEl.addEventListener('change', () => {
-        if (modelSelectEl) switchModel(modelSelectEl.value);
+    // Bind scenario segmented buttons
+    if (scenarioButtons) {
+      scenarioButtons.addEventListener('click', (ev) => {
+        const target = ev.target;
+        if (!(target instanceof HTMLElement)) return;
+        const btn = target.closest('button.seg-btn');
+        if (!btn) return;
+        const key = btn.getAttribute('data-key');
+        if (!key) return;
+        Array.from(scenarioButtons.querySelectorAll('button.seg-btn')).forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
+        btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true');
+        setScenarioManaged(key);
+        // after scenario changes, keep orbit target centered on model
+        if (modelRoot) updateControlsTargetFromObject(camera, controls, modelRoot);
+        // Rebuild admin UI for lights (mirrors previous behavior)
+        try {
+          lightsManager && lightsManager.applyScenarioLights(key);
+          const lightsAdminEl = document.getElementById('lightsAdmin');
+          if (lightsAdminEl) {
+            try { lightsManager.addAutoRotatingDirectional('autoRotX', { color: 0xffffff, intensity: 10, speedDegPerSec: 25, radiusFactor: 1.2, axis: 'x', phaseDeg: 0 }); } catch (_) {}
+            try { lightsManager.addAutoRotatingDirectional('autoRotY', { color: 0xffffff, intensity: 10, speedDegPerSec: -20, radiusFactor: 1.4, axis: 'y', phaseDeg: 120 }); } catch (_) {}
+            try { lightsManager.addAutoRotatingDirectional('autoRotX2', { color: 0xffffff, intensity: 10, speedDegPerSec: 15, radiusFactor: 0.9, axis: 'x', phaseDeg: 240 }); } catch (_) {}
+            lightsManager.buildLightsAdminUI(lightsAdminEl);
+          }
+        } catch (_) {}
+      });
+    }
+    // Bind model segmented buttons
+    if (modelButtons) {
+      modelButtons.addEventListener('click', (ev) => {
+        const target = ev.target;
+        if (!(target instanceof HTMLElement)) return;
+        const btn = target.closest('button.seg-btn');
+        if (!btn) return;
+        const url = btn.getAttribute('data-url');
+        if (!url) return;
+        Array.from(modelButtons.querySelectorAll('button.seg-btn')).forEach((b) => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
+        btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true');
+        switchModel(url);
       });
     }
 
-    if (lineColorInputEl) {
-      lineColorInputEl.addEventListener('input', () => {
-        const hex = lineColorInputEl.value || '#ffffff';
-        applyLineColor(hex);
+    // Bind swatch clicks (event delegation)
+    const bindSwatches = (containerId, onHex) => {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      el.addEventListener('click', (ev) => {
+        const target = ev.target;
+        if (!(target instanceof HTMLElement)) return;
+        const btn = target.closest('button.swatch-btn');
+        if (!btn) return;
+        const hex = btn.getAttribute('data-hex') || '#ffffff';
+        onHex(hex);
+        // Update active state
+        Array.from(el.querySelectorAll('button.swatch-btn')).forEach((b) => {
+          b.classList.remove('active');
+          b.setAttribute('aria-pressed', 'false');
+        });
+        btn.classList.add('active');
+        btn.setAttribute('aria-pressed', 'true');
       });
-    }
-    if (modelColorInputEl) {
-      modelColorInputEl.addEventListener('input', () => {
-        const hex = modelColorInputEl.value || '#ffffff';
-        // Ensure base color map is disabled so color is visible
-        disableMapForSpecificTargetExt(modelRoot);
-        applyModelTargetColor(hex);
-      });
-    }
+    };
+    bindSwatches('lineColorSwatches', (hex) => applyLineColor(hex));
+    bindSwatches('capaColorSwatches', (hex) => applyColorToRole('capa', hex, { disableMap: true }));
+    // Model color input removed
 
-    if (logoColorEl) {
-      logoColorEl.addEventListener('input', () => {
-        const hex = logoColorEl.value || '#ffffff';
-        applyColorToRole('logos', hex, { disableMap: true });
+    // Logo color input removed
+    if (toggleLogosControlsBtn) {
+      const logosControls = document.getElementById('logosControls');
+      const updateLabel = () => {
+        if (!logosControls || !toggleLogosControlsBtn) return;
+        const isHidden = logosControls.style.display === 'none';
+        toggleLogosControlsBtn.textContent = isHidden ? 'Mostrar controles' : 'Ocultar controles';
+      };
+      toggleLogosControlsBtn.addEventListener('click', () => {
+        const logosControls = document.getElementById('logosControls');
+        if (!logosControls) return;
+        const isHidden = logosControls.style.display === 'none';
+        logosControls.style.display = isHidden ? '' : 'none';
+        updateLabel();
       });
+      updateLabel();
     }
 
     // Guard: if fewer than 4 instances, disable extra controls
@@ -747,57 +824,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
 
     // Light controls are handled within lights.js
 
-    // Scenario controls
-    const scenarioSelect = /** @type {HTMLSelectElement} */ (document.getElementById('scenarioSelect'));
-    if (scenarioSelect) {
-      scenarioSelect.addEventListener('change', () => {
-        setScenarioManaged(scenarioSelect.value);
-        // after scenario changes, keep orbit target centered on model
-        if (modelRoot) updateControlsTargetFromObject(camera, controls, modelRoot);
-        // Re-apply and rebuild admin UI
-        try {
-          lightsManager && lightsManager.applyScenarioLights(scenarioSelect.value);
-          const lightsAdminEl = document.getElementById('lightsAdmin');
-          if (lightsAdminEl) {
-            // Recreate default auto-rotating lights for the new scenario (start deactivated)
-            try { lightsManager.addAutoRotatingDirectional('autoRotX', { color: 0xffffff, intensity: 10, speedDegPerSec: 25, radiusFactor: 1.2, axis: 'x', phaseDeg: 0 }); } catch (_) {}
-            try { lightsManager.addAutoRotatingDirectional('autoRotY', { color: 0xffffff, intensity: 10, speedDegPerSec: -20, radiusFactor: 1.4, axis: 'y', phaseDeg: 120 }); } catch (_) {}
-            try { lightsManager.addAutoRotatingDirectional('autoRotX2', { color: 0xffffff, intensity: 10, speedDegPerSec: 15, radiusFactor: 0.9, axis: 'x', phaseDeg: 240 }); } catch (_) {}
-            lightsManager.buildLightsAdminUI(lightsAdminEl);
-          }
-        } catch (_) {}
-        // Refresh Presets dropdown for the new scenario
-        try {
-          const presetSelectEl = /** @type {HTMLSelectElement} */ (document.getElementById('presetSelect'));
-          if (presetSelectEl) {
-            const key = `presets:${currentScenarioKey || 'none'}`;
-            let list = [];
-            try { list = JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) { list = []; }
-            presetSelectEl.innerHTML = '';
-            for (const p of list) {
-              const opt = document.createElement('option');
-              opt.value = p.name; opt.textContent = p.name;
-              presetSelectEl.appendChild(opt);
-            }
-          }
-        } catch (_) {}
-        // Refresh camera presets dropdown for the new scenario
-        try {
-          const camPresetSelect = /** @type {HTMLSelectElement} */ (document.getElementById('camPresetSelect'));
-          if (camPresetSelect) {
-            const key = `cam-presets:${currentScenarioKey || 'none'}`;
-            let list = [];
-            try { list = JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) { list = []; }
-            camPresetSelect.innerHTML = '';
-            for (const p of list) {
-              const opt = document.createElement('option');
-              opt.value = p.name; opt.textContent = p.name;
-              camPresetSelect.appendChild(opt);
-            }
-          }
-        } catch (_) {}
-      });
-    }
+    // Scenario controls migrated to segmented buttons above
     // Floor plane is always hidden now
     if (floorMesh) floorMesh.visible = false;
 
@@ -870,8 +897,18 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
           const isKosha = (typeof path === 'string' && path.includes('assets/models/kosha4/'));
           removeDefaultTextureMapsFromModel(!isKosha ? true : false);
           applyColorToModel('#ffffff');
-          if (lineColorInputEl) applyLineColor(lineColorInputEl.value || '#ffffff');
-          if (modelColorInputEl) applyModelTargetColor(modelColorInputEl.value || '#ffffff');
+          // Initialize colors from active swatches
+          try {
+            const lineActive = document.querySelector('#lineColorSwatches .swatch-btn.active');
+            const lineHex = lineActive?.getAttribute('data-hex') || '#666666';
+            applyLineColor(lineHex);
+          } catch (_) {}
+          try {
+            const capaActive = document.querySelector('#capaColorSwatches .swatch-btn.active');
+            const capaHex = capaActive?.getAttribute('data-hex') || '#666666';
+            applyColorToRole('capa', capaHex, { disableMap: true });
+          } catch (_) {}
+          // Model color input removed
           applyLogoRegionsFromUI();
         } catch (e) { /* non-fatal */ }
         try {
@@ -884,7 +921,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
         
         onProgress?.(85);
         // After model is ready, load default scenario if any
-        if (currentScenarioKey && currentScenarioKey !== 'none') {
+        if (currentScenarioKey) {
           setScenarioManaged(currentScenarioKey, onProgress, onDone);
         } else {
           onProgress?.(100); onDone?.();
@@ -1149,5 +1186,3 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
     initialize();
   }
 })();
-
-

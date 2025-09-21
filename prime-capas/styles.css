@@ -184,6 +184,54 @@ select {
   color: #e2e8f0;
 }
 
+/* Segmented button rows */
+.segmented-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+@media (min-width: 640px) {
+  .segmented-row { grid-template-columns: 1fr; }
+}
+.seg-btn {
+  display: inline-block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 6px;
+  background: #0b1220;
+  color: #e2e8f0;
+  text-align: left;
+  cursor: pointer;
+}
+.seg-btn.active {
+  border-color: #38bdf8;
+  background: #0f172a;
+}
+.seg-btn:hover { background: #111827; }
+
+/* Swatch buttons */
+.swatch-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+.swatch-btn {
+  width: 100%;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid rgba(148,163,184,0.3);
+  background: var(--swatch, #ffffff);
+  cursor: pointer;
+}
+.swatch-btn.active {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+.swatch-btn:hover {
+  filter: brightness(1.05);
+}
+
 /* Removed region highlight styles */
 
 /* Responsive: stack sidebar on top for mobile */

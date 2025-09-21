@@ -40,7 +40,11 @@ export function createScenarioManager(scene) {
   function setScenario(key, { onProgress, onDone } = {}) {
     disposeScenario();
     currentScenarioKey = key || 'none';
-    if (!key || key === 'none') return;
+    if (!key || key === 'none') {
+      onProgress?.(100);
+      onDone?.();
+      return;
+    }
 
     const url = scenarioUrlMap[key] || `./assets/scenarios/${key}/scene.gltf`;
     const loader = new GLTFLoader();
@@ -76,5 +80,4 @@ export function createScenarioManager(scene) {
 
   return { setScenario, getScenarioRoot, getCurrentScenarioKey };
 }
-
 

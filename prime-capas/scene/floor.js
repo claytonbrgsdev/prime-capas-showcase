@@ -34,6 +34,13 @@ export function snapModelToScenarioFloor(modelRoot, scenarioKey, scenarioRoot, c
   const center = new THREE.Vector3();
   box.getCenter(center);
 
+  if (!scenarioKey || scenarioKey === 'none') {
+    const bottomY = box.min.y;
+    const deltaY = -bottomY;
+    modelRoot.position.y += deltaY;
+    return { modelYOffsetBase: modelRoot.position.y };
+  }
+
   const raycaster = new THREE.Raycaster();
   let rayOrigin;
   let rayDirection;
@@ -81,4 +88,3 @@ export function snapModelToScenarioFloor(modelRoot, scenarioKey, scenarioRoot, c
   const modelYOffsetBase = modelRoot.position.y;
   return { modelYOffsetBase };
 }
-

@@ -15,37 +15,59 @@
             <h1>Controles</h1>
             <hr />
             <div class="control">
-                <label for="scenarioSelect">Escolha o cenário</label>
-                <select id="scenarioSelect">
-                    <option value="modern_garage">Galpão</option>
-                    <option value="sci-fi_garage" selected>Show Room</option>
-                    <option value="garageshowroom_vr_ready">Garage Showroom (VR Ready)</option>
-                </select>
+                <label>Escolha o cenário</label>
+                <div id="scenarioButtons" class="segmented-row">
+                    <button class="seg-btn active" data-key="none" aria-pressed="true">Sem cenário</button>
+                    <button class="seg-btn" data-key="modern_garage" aria-pressed="false">Galpão</button>
+                    <button class="seg-btn" data-key="sci-fi_garage" aria-pressed="false">Show Room</button>
+                    <button class="seg-btn" data-key="garageshowroom_vr_ready" aria-pressed="false">Garage Showroom (VR Ready)</button>
+                </div>
             </div>
             <div class="control">
-                <label for="modelSelect">Modelo</label>
-                <select id="modelSelect">
-                    <option value="./assets/models/kosha4/teste7.glb">Kosha4 teste 7 (GLB)</option>
-                    <option value="./assets/models/kosha4/teste10.glb">Kosha4 teste 10 (GLB)</option>
-                    <option value="./assets/models/kosha4/teste11.glb">Kosha4 teste 11 (GLB)</option>
-                    <option value="./assets/models/kosha4/teste12.glb">Kosha4 teste 12 (GLB)</option>
-                    <option value="./assets/models/kosha4/teste13.glb">Kosha4 teste 13 (GLB)</option>
-                    <option value="./assets/models/kosha4/teste14.glb" selected>Kosha4 teste 14 (GLB)</option>
-                    <option value="./assets/models/kosha4/jetski6.glb">Jetski 6 (GLB)</option>
-                </select>
+                <label>Modelo</label>
+                <div id="modelButtons" class="segmented-row">
+                    <button class="seg-btn" data-url="./assets/models/kosha4/teste7.glb" aria-pressed="false">Kosha4 teste 7 (GLB)</button>
+                    <button class="seg-btn" data-url="./assets/models/kosha4/teste10.glb" aria-pressed="false">Kosha4 teste 10 (GLB)</button>
+                    <button class="seg-btn" data-url="./assets/models/kosha4/teste11.glb" aria-pressed="false">Kosha4 teste 11 (GLB)</button>
+                    <button class="seg-btn" data-url="./assets/models/kosha4/teste12.glb" aria-pressed="false">Kosha4 teste 12 (GLB)</button>
+                    <button class="seg-btn" data-url="./assets/models/kosha4/teste13.glb" aria-pressed="false">Kosha4 teste 13 (GLB)</button>
+                    <button class="seg-btn active" data-url="./assets/models/kosha4/teste14.glb" aria-pressed="true">Kosha4 teste 14 (GLB)</button>
+                    <button class="seg-btn" data-url="./assets/models/kosha4/jetski6.glb" aria-pressed="false">Jetski 6 (GLB)</button>
+                </div>
             </div>
             <hr />
+            <div class="control">
+                <label>Cor das Linhas</label>
+                <div id="lineColorSwatches" class="swatch-row">
+                    <button class="swatch-btn active" data-hex="#666666" aria-pressed="true" aria-label="Preta" title="Preta" style="--swatch:#666666"></button>
+                    <button class="swatch-btn" data-hex="#4169E1" aria-pressed="false" aria-label="Azul royal" title="Azul royal" style="--swatch:#4169E1"></button>
+                    <button class="swatch-btn" data-hex="#849B88" aria-pressed="false" aria-label="Verde musgo" title="Verde musgo" style="--swatch:#849B88"></button>
+                    <button class="swatch-btn" data-hex="#FF0000" aria-pressed="false" aria-label="Vermelho" title="Vermelho" style="--swatch:#FF0000"></button>
+                    <button class="swatch-btn" data-hex="#5E63BC" aria-pressed="false" aria-label="Azul marinho" title="Azul marinho" style="--swatch:#5E63BC"></button>
+                    <button class="swatch-btn" data-hex="#808080" aria-pressed="false" aria-label="Cinza" title="Cinza" style="--swatch:#808080"></button>
+                </div>
+            </div>
+            <div class="control">
+                <label>Cor da CAPA</label>
+                <div id="capaColorSwatches" class="swatch-row">
+                    <button class="swatch-btn active" data-hex="#666666" aria-pressed="true" aria-label="Preta" title="Preta" style="--swatch:#666666"></button>
+                    <button class="swatch-btn" data-hex="#4169E1" aria-pressed="false" aria-label="Azul royal" title="Azul royal" style="--swatch:#4169E1"></button>
+                    <button class="swatch-btn" data-hex="#849B88" aria-pressed="false" aria-label="Verde musgo" title="Verde musgo" style="--swatch:#849B88"></button>
+                    <button class="swatch-btn" data-hex="#FF0000" aria-pressed="false" aria-label="Vermelho" title="Vermelho" style="--swatch:#FF0000"></button>
+                    <button class="swatch-btn" data-hex="#5E63BC" aria-pressed="false" aria-label="Azul marinho" title="Azul marinho" style="--swatch:#5E63BC"></button>
+                    <button class="swatch-btn" data-hex="#808080" aria-pressed="false" aria-label="Cinza" title="Cinza" style="--swatch:#808080"></button>
+                </div>
+            </div>
             <div class="control">
                 <label for="pngUpload">Aplicar PNG (Frente/Trás/Lateral 1/2)</label>
                 <input id="pngUpload" type="file" accept="image/png" />
             </div>
-            <div class="control">
-                <label for="logoColor">Cor do LOGO/LOGOS</label>
-                <input id="logoColor" type="color" value="#ffffff" />
-            </div>
             <hr />
-            <h2>LOGOS (4 instâncias)</h2>
-            <div id="logosControls" class="control" style="gap:15px">
+            <div class="row" style="grid-template-columns: 1fr auto; align-items: center; margin-bottom: 8px;">
+                <h5 style="margin: 0;">LOGOS Debug</h5>
+                <button id="toggleLogosControlsBtn" type="button">Mostrar controles</button>
+            </div>
+            <div id="logosControls" class="control" style="gap:15px; display:none">
                 <!-- Instance 0 - Lateral Motorista -->
                 <div class="logo-instance-group" style="border: 1px solid rgba(148,163,184,0.15); border-radius: 6px; padding: 12px; margin-bottom: 8px;">
                     <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
@@ -139,4 +161,3 @@
     <script type="module" src="./main.js"></script>
 </body>
 </html>
-

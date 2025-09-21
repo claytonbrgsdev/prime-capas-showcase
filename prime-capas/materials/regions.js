@@ -8,6 +8,7 @@ export const materialRoleMatchers = {
   lateral1: [/lateral\s*1|lateral\.?001|lateral\b(?!.*2)|left|esquerda/i],
   lateral2: [/lateral\s*2|lateral\.?002|right|direita/i],
   logos: [/\blogo\b|\blogos\b/i],
+  capa: [/\bcapa\b/i],
 };
 
 export function setMaterialRoleMatchers(overrides) {
