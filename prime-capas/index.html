@@ -47,15 +47,27 @@
                         <button class="swatch-btn" data-hex="#4169E1" aria-pressed="false" aria-label="Azul royal" title="Azul royal" style="--swatch:#4169E1"></button>
                         <button class="swatch-btn" data-hex="#849B88" aria-pressed="false" aria-label="Verde musgo" title="Verde musgo" style="--swatch:#849B88"></button>
                         <button class="swatch-btn" data-hex="#FF0000" aria-pressed="false" aria-label="Vermelho" title="Vermelho" style="--swatch:#FF0000"></button>
-                        <button class="swatch-btn" data-hex="#5E63BC" aria-pressed="false" aria-label="Azul marinho" title="Azul marinho"(style="--swatch:#5E63BC"></button>
+                        <button class="swatch-btn" data-hex="#5E63BC" aria-pressed="false" aria-label="Azul marinho" title="Azul marinho" style="--swatch:#5E63BC"></button>
                         <button class="swatch-btn" data-hex="#808080" aria-pressed="false" aria-label="Cinza" title="Cinza" style="--swatch:#808080"></button>
                     </div>
                 </div>
             </section>
             <section class="control-group">
                 <div class="control">
-                    <label for="pngUpload">Aplicar PNG (Frente/Trás/Lateral 1/2)</label>
-                    <input id="pngUpload" type="file" accept="image/png" />
+                    <label>Biblioteca de logos</label>
+                    <input id="pngUpload" type="file" accept="image/png" multiple />
+                    <div id="logoImageList" class="logo-image-list">
+                        <p class="logo-image-empty">Nenhuma imagem carregada.</p>
+                    </div>
+                </div>
+                <div class="control">
+                    <label>Imagem por região</label>
+                    <div class="logo-assignment-grid">
+                        <label class="logo-assignment-row"><span>Lateral - motorista</span><select class="logo-assignment-select" data-instance="0"></select></label>
+                        <label class="logo-assignment-row"><span>Lateral - passageiro</span><select class="logo-assignment-select" data-instance="1"></select></label>
+                        <label class="logo-assignment-row"><span>Traseira</span><select class="logo-assignment-select" data-instance="2"></select></label>
+                        <label class="logo-assignment-row"><span>Dianteira</span><select class="logo-assignment-select" data-instance="3"></select></label>
+                    </div>
                 </div>
                 <div class="control">
                     <label>Exibir regiões da logo</label>
@@ -68,6 +80,7 @@
                 </div>
             </section>
         </aside>
+
         <div id="viewport" aria-label="Three.js viewport">
             <div id="adminOverlay" class="admin-overlay" aria-label="Controles administrativos">
                 <details class="admin-shell" open>

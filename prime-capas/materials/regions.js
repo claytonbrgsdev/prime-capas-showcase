@@ -37,6 +37,9 @@ function ensureClonedMaterialFor(mesh, indexOrMat, userDataFlagKey) {
     if (!m.userData || !m.userData[userDataFlagKey]) {
       const cloned = m.clone();
       cloned.userData = { ...(m.userData || {}), [userDataFlagKey]: true };
+      if (m.color && typeof m.color.clone === 'function' && !cloned.userData._origColor) {
+        cloned.userData._origColor = m.color.clone();
+      }
       mesh.material[i] = cloned;
       return cloned;
     }
@@ -47,6 +50,9 @@ function ensureClonedMaterialFor(mesh, indexOrMat, userDataFlagKey) {
     if (!m.userData || !m.userData[userDataFlagKey]) {
       const cloned = m.clone();
       cloned.userData = { ...(m.userData || {}), [userDataFlagKey]: true };
+      if (m.color && typeof m.color.clone === 'function' && !cloned.userData._origColor) {
+        cloned.userData._origColor = m.color.clone();
+      }
       mesh.material = cloned;
       return cloned;
     }
@@ -170,6 +176,68 @@ export function applyTextureToRole(modelRoot, roleKey, textureUrl, options = {})
     undefined,
     (err) => { console.warn('[texture] failed to load', textureUrl, err); }
   );
+}
+
+export function applyTextureToLogoInstance(modelRoot, instanceIndex, textureUrl, options = {}) {
+  if (!modelRoot || !textureUrl) return;
+  const list = listRoleInstances(modelRoot, 'logos');
+  const item = list[instanceIndex];
+  if (!item) return;
+
+  const texLoader = new THREE.TextureLoader();
+  texLoader.load(
+    textureUrl,
+    (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      if (options.anisotropy != null) tex.anisotropy = options.anisotropy;
+      if (options.wrap === 'repeat') {
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      } else {
+        tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+      }
+      if (options.flipY != null) tex.flipY = !!options.flipY;
+
+      const mat = ensureClonedMaterialFor(item.mesh, Array.isArray(item.mesh.material) ? item.materialIndex : item.mesh.material, '_clonedForRoleTexture');
+      if (!mat) return;
+
+      const instancedTex = tex.clone();
+      instancedTex.needsUpdate = true;
+      if (options.wrap === 'repeat') {
+        instancedTex.wrapS = instancedTex.wrapT = THREE.RepeatWrapping;
+      } else {
+        instancedTex.wrapS = instancedTex.wrapT = THREE.ClampToEdgeWrapping;
+      }
+      try { fitTextureToMaterialGroups(item.mesh, item.materialIndex, instancedTex, { padPercent: options.padPercent }); } catch (_) {}
+      if ('map' in mat) mat.map = instancedTex;
+      if ('color' in mat) mat.color.set('#ffffff');
+      if ('visible' in mat) mat.visible = true;
+      mat.needsUpdate = true;
+
+      const rotation = typeof options.rotationDegrees === 'number' ? options.rotationDegrees : getLogoTextureRotation(modelRoot, instanceIndex);
+      setLogoTextureRotation(modelRoot, instanceIndex, rotation);
+    },
+    undefined,
+    (err) => { console.warn('[texture] failed to load logo instance texture', textureUrl, err); }
+  );
+}
+
+export function clearTextureFromLogoInstance(modelRoot, instanceIndex) {
+  if (!modelRoot) return;
+  const list = listRoleInstances(modelRoot, 'logos');
+  const item = list[instanceIndex];
+  if (!item) return;
+  const mat = ensureClonedMaterialFor(item.mesh, Array.isArray(item.mesh.material) ? item.materialIndex : item.mesh.material, '_clonedForRoleTexture');
+  if (!mat) return;
+  if ('map' in mat && mat.map) {
+    try { mat.map.dispose?.(); } catch (_) {}
+    mat.map = null;
+  }
+  if (mat.userData?._origColor && 'color' in mat && mat.color) {
+    try { mat.color.copy(mat.userData._origColor); } catch (_) {}
+  }
+  if ('visible' in mat) mat.visible = false;
+  mat.needsUpdate = true;
+  logosTextureRotations.delete(getLogoInstanceKey(modelRoot, instanceIndex));
 }
 
 export function applyColorToRole(modelRoot, roleKey, hex, options = {}) {

@@ -12,7 +12,7 @@ import { createScenarioManager } from './scenarios.js';
 import { initializeCamera, enforceCameraDistanceClamp as clampCameraDistance, updateControlsTargetFromObject, frameObject, setPleasantCameraView as setPleasantView } from './camera.js';
 import { applyColorToModel as applyColorToModelExt, applyColorToSpecificTarget as applyColorToSpecificTargetExt, disableMapForSpecificTarget as disableMapForSpecificTargetExt, applyLineColor as applyLineColorExt } from './materials/core.js';
 import { removeDefaultTextureMapsFromModel as removeDefaultTextureMapsFromModelExt } from './materials/baked.js';
-import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialNames as getAllMaterialNamesExt, setMaterialRoleMatchers as setMaterialRoleMatchersExt, applyTextureToRole as applyTextureToRoleExt, applyColorToRole as applyColorToRoleExt, getRoleInstanceCount as getRoleInstanceCountExt, setRoleInstanceVisible as setRoleInstanceVisibleExt, rotateRoleInstance as rotateRoleInstanceExt, setLogoTextureRotation, getLogoTextureRotation, resetLogoTextureRotation, applyDefaultLogoRotations, getDefaultRotation } from './materials/regions.js';
+import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialNames as getAllMaterialNamesExt, setMaterialRoleMatchers as setMaterialRoleMatchersExt, applyTextureToRole as applyTextureToRoleExt, applyColorToRole as applyColorToRoleExt, getRoleInstanceCount as getRoleInstanceCountExt, setRoleInstanceVisible as setRoleInstanceVisibleExt, rotateRoleInstance as rotateRoleInstanceExt, setLogoTextureRotation, getLogoTextureRotation, resetLogoTextureRotation, applyDefaultLogoRotations, getDefaultRotation, applyTextureToLogoInstance, clearTextureFromLogoInstance } from './materials/regions.js';
 
 (function () {
   // ===== App State =====
@@ -93,12 +93,20 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
   let logoUserInst0Visible = null, logoUserInst1Visible = null, logoUserInst2Visible = null, logoUserInst3Visible = null;
   /** @type {HTMLButtonElement | null} */
   let logoInst0RotCCW = null, logoInst0RotCW = null, logoInst1RotCCW = null, logoInst1RotCW = null, logoInst2RotCCW = null, logoInst2RotCW = null, logoInst3RotCCW = null, logoInst3RotCW = null;
-  
+
   // Texture rotation sliders and value displays for each instance
   /** @type {HTMLInputElement | null} */
   let logoInst0RotSlider = null, logoInst1RotSlider = null, logoInst2RotSlider = null, logoInst3RotSlider = null;
   /** @type {HTMLSpanElement | null} */
   let logoInst0RotValue = null, logoInst1RotValue = null, logoInst2RotValue = null, logoInst3RotValue = null;
+
+  const logoInstanceLabels = ['Lateral - motorista', 'Lateral - passageiro', 'Traseira', 'Dianteira'];
+  const logoImageLibrary = [];
+  const logoInstanceAssignments = [null, null, null, null];
+  let logoImageListEl = null;
+  /** @type {HTMLSelectElement[]} */
+  let logoAssignmentSelects = [];
+  let logoImageIdCounter = 0;
   
   // Expose refresher so we can call it after model load
   let refreshLogosControlsAvailability = null;
@@ -463,6 +471,15 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
     logoInst1RotValue = /** @type {HTMLSpanElement} */ (document.getElementById('logoInst1RotValue'));
     logoInst2RotValue = /** @type {HTMLSpanElement} */ (document.getElementById('logoInst2RotValue'));
     logoInst3RotValue = /** @type {HTMLSpanElement} */ (document.getElementById('logoInst3RotValue'));
+
+    logoImageListEl = document.getElementById('logoImageList');
+    logoAssignmentSelects = Array.from(document.querySelectorAll('.logo-assignment-select'));
+    logoAssignmentSelects.forEach((select) => {
+      const idx = Number(select.getAttribute('data-instance') || '0');
+      select.addEventListener('change', () => handleLogoAssignmentChange(idx, select.value));
+    });
+    rebuildLogoImageUI();
+
     const initialModelUrl = (document.querySelector('#modelButtons .seg-btn.active')?.getAttribute('data-url')) || './assets/models/kosha4/teste14.glb';
     console.log('[loader] loading', initialModelUrl);
     loadGltfModel(initialModelUrl, (p) => overlay.setProgress(p), () => overlay.hide());
@@ -585,6 +602,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
         setEnabled(logoInst3RotSlider, count > 3);
       } catch (_) {}
       applyLogoVisibilityFromUI();
+      applyAllLogoAssignments();
     };
 
     const bindLogoInstanceControls = (idx, visibilityCheckboxes, btnCCW, btnCW, rotSlider, rotValue) => {
@@ -671,24 +689,11 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
       }
     }
     
-    // PNG upload handler: apply to LOGOS role (and also front/back/lat roles for backward compat)
     if (pngUploadEl) {
-      pngUploadEl.addEventListener('change', async () => {
-        const file = pngUploadEl.files && pngUploadEl.files[0];
-        if (!file || !modelRoot) return;
-        try {
-          const url = URL.createObjectURL(file);
-          applyTextureToRole('logos', url, { anisotropy: 8, flipY: false });
-          applyTextureToRole('frente', url, { anisotropy: 8, flipY: false });
-          applyTextureToRole('tras', url, { anisotropy: 8, flipY: false });
-          applyTextureToRole('lateral1', url, { anisotropy: 8, flipY: false });
-          applyTextureToRole('lateral2', url, { anisotropy: 8, flipY: false });
-          
-          // Reapply saved rotations after texture is loaded
-          setTimeout(() => reapplyLogoRotations(), 100);
-        } finally {
-          try { pngUploadEl.value = ''; } catch (_) {}
-        }
+      pngUploadEl.addEventListener('change', () => {
+        const files = Array.from(pngUploadEl.files || []);
+        addLogoImages(files);
+        try { pngUploadEl.value = ''; } catch (_) {}
       });
     }
     
@@ -785,9 +790,10 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
           console.log('[materials] model materials:', names);
         } catch (_) {}
         try { refreshLogosControlsAvailability && refreshLogosControlsAvailability(); } catch (_) {}
-        
+        try { applyAllLogoAssignments(); } catch (_) {}
+
         frameObject3D(modelRoot);
-        
+
         onProgress?.(85);
         // After model is ready, load default scenario if any
         if (currentScenarioKey) {
@@ -886,6 +892,111 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
       if (!activeCheckbox) return;
       setRoleInstanceVisibleExt(modelRoot, 'logos', idx, !!activeCheckbox.checked);
     });
+  }
+
+  function findLogoImageById(id) {
+    return logoImageLibrary.find((img) => img.id === id) || null;
+  }
+
+  function rebuildLogoImageUI() {
+    if (logoImageListEl) {
+      logoImageListEl.innerHTML = '';
+      if (!logoImageLibrary.length) {
+        const msg = document.createElement('p');
+        msg.className = 'logo-image-empty';
+        msg.textContent = 'Nenhuma imagem carregada.';
+        logoImageListEl.appendChild(msg);
+      } else {
+        for (const img of logoImageLibrary) {
+          const card = document.createElement('div');
+          card.className = 'logo-image-card';
+          const thumb = document.createElement('div');
+          thumb.className = 'logo-image-thumb';
+          thumb.style.backgroundImage = `url(${img.url})`;
+          const name = document.createElement('span');
+          name.className = 'logo-image-name';
+          name.textContent = img.name || 'imagem.png';
+          const removeBtn = document.createElement('button');
+          removeBtn.type = 'button';
+          removeBtn.className = 'logo-image-remove';
+          removeBtn.textContent = 'Remover';
+          removeBtn.addEventListener('click', () => removeLogoImage(img.id));
+          card.appendChild(thumb);
+          card.appendChild(name);
+          card.appendChild(removeBtn);
+          logoImageListEl.appendChild(card);
+        }
+      }
+    }
+
+    logoAssignmentSelects.forEach((select) => {
+      const idx = Number(select.getAttribute('data-instance') || '0');
+      const current = logoInstanceAssignments[idx] || '';
+      select.innerHTML = '';
+      const noneOpt = document.createElement('option');
+      noneOpt.value = '';
+      noneOpt.textContent = 'Nenhuma';
+      select.appendChild(noneOpt);
+      for (const img of logoImageLibrary) {
+        const opt = document.createElement('option');
+        opt.value = img.id;
+        opt.textContent = img.name || 'imagem.png';
+        select.appendChild(opt);
+      }
+      select.value = current;
+    });
+  }
+
+  function addLogoImages(files) {
+    const filtered = files.filter((file) => /png$/i.test(file.name || '') || file.type === 'image/png');
+    if (!filtered.length) return;
+    for (const file of filtered) {
+      const id = `logoImg_${Date.now()}_${logoImageIdCounter++}`;
+      const url = URL.createObjectURL(file);
+      logoImageLibrary.push({ id, name: file.name || id, url });
+    }
+    rebuildLogoImageUI();
+    applyAllLogoAssignments();
+  }
+
+  function removeLogoImage(id) {
+    const idx = logoImageLibrary.findIndex((img) => img.id === id);
+    if (idx === -1) return;
+    const [removed] = logoImageLibrary.splice(idx, 1);
+    try { if (removed && removed.url) URL.revokeObjectURL(removed.url); } catch (_) {}
+    for (let i = 0; i < logoInstanceAssignments.length; i++) {
+      if (logoInstanceAssignments[i] === id) {
+        logoInstanceAssignments[i] = null;
+        if (modelRoot) clearTextureFromLogoInstance(modelRoot, i);
+      }
+    }
+    rebuildLogoImageUI();
+    applyAllLogoAssignments();
+  }
+
+  function handleLogoAssignmentChange(instanceIndex, imageId) {
+    logoInstanceAssignments[instanceIndex] = imageId || null;
+    applyImageAssignment(instanceIndex);
+  }
+
+  function applyImageAssignment(instanceIndex) {
+    if (!modelRoot) return;
+    const imageId = logoInstanceAssignments[instanceIndex];
+    if (!imageId) {
+      clearTextureFromLogoInstance(modelRoot, instanceIndex);
+      setTimeout(() => reapplyLogoRotations(), 100);
+      return;
+    }
+    const img = findLogoImageById(imageId);
+    if (!img) return;
+    const rotation = getLogoTextureRotation(modelRoot, instanceIndex);
+    applyTextureToLogoInstance(modelRoot, instanceIndex, img.url, { anisotropy: 8, flipY: false, rotationDegrees: rotation });
+    setTimeout(() => reapplyLogoRotations(), 120);
+  }
+
+  function applyAllLogoAssignments() {
+    if (!modelRoot) return;
+    logoInstanceAssignments.forEach((_, idx) => applyImageAssignment(idx));
   }
 
   function updateFloorGridVisibility() {
