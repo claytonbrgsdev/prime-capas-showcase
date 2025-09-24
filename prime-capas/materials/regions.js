@@ -263,6 +263,29 @@ export function applyColorToRole(modelRoot, roleKey, hex, options = {}) {
   });
 }
 
+export function applyRoughnessToRole(modelRoot, roleKey, roughness, options = {}) {
+  if (!modelRoot || roughness === undefined) return;
+  modelRoot.traverse((child) => {
+    if (!child.isMesh || !child.material) return;
+    const mats = Array.isArray(child.material) ? child.material : [child.material];
+    const meshName = (child.name || '').toString();
+    for (let i = 0; i < mats.length; i++) {
+      const m = mats[i];
+      if (!m) continue;
+      const matName = typeof m.name === 'string' ? m.name : '';
+      const meshMatches = (materialRoleMatchers[roleKey] || []).some((rx) => { try { return rx.test(meshName); } catch { return false; } });
+      if (materialMatchesRole(m, roleKey) || meshMatches) {
+        const mat = ensureClonedMaterialFor(child, Array.isArray(child.material) ? i : child.material, '_clonedForRoleRoughness');
+        if (!mat) continue;
+        if ('roughness' in mat && mat.roughness !== undefined) mat.roughness = roughness;
+        if ('metalness' in mat && options.metalness !== undefined) mat.metalness = options.metalness;
+        mat.needsUpdate = true;
+        console.log(`[roughness] Applied roughness ${roughness} to ${roleKey} material:`, matName || mat.type);
+      }
+    }
+  });
+}
+
 // Compute UV bounds for the subset of geometry faces that use a given material index,
 // then transform the texture so a single image exactly covers that UV rectangle.
 function fitTextureToMaterialGroups(mesh, materialIndex, texture, opts = {}) {
@@ -459,23 +482,40 @@ export function getLogoTextureRotation(modelRoot, instanceIndex) {
 // Rotações padrão por instância (em graus)
 const DEFAULT_ROTATIONS = {
   0: 90,  // lateral - motorista
-  1: 90,  // lateral - passageiro  
+  1: 90,  // lateral - passageiro
   2: 180, // traseira
   3: 0    // frente (sem rotação)
 };
 
-export function getDefaultRotation(instanceIndex) {
+// Rotações padrão específicas por modelo
+const MODEL_SPECIFIC_ROTATIONS = {
+  // Modelo Jetski - ajustes específicos
+  jetski6: {
+    0: 90,  // lateral - motorista (90° para o Jetski)
+    1: 90,  // lateral - passageiro
+    2: 180, // traseira
+    3: 0    // frente
+  }
+};
+
+export function getDefaultRotation(instanceIndex, modelKey = null) {
+  // Se há uma configuração específica para o modelo atual, use-a
+  if (modelKey && MODEL_SPECIFIC_ROTATIONS[modelKey]) {
+    return MODEL_SPECIFIC_ROTATIONS[modelKey][instanceIndex] || 0;
+  }
+
+  // Caso contrário, use as rotações padrão
   return DEFAULT_ROTATIONS[instanceIndex] || 0;
 }
 
-export function applyDefaultLogoRotations(modelRoot) {
+export function applyDefaultLogoRotations(modelRoot, modelKey = null) {
   if (!modelRoot) return;
-  
+
   console.log('[LOGOS] Applying default rotations for all instances');
-  
+
   // Aplicar rotações padrão para cada instância
   for (let i = 0; i < 4; i++) {
-    const defaultRotation = getDefaultRotation(i);
+    const defaultRotation = getDefaultRotation(i, modelKey);
     if (defaultRotation !== 0) {
       setLogoTextureRotation(modelRoot, i, defaultRotation);
       console.log(`[LOGOS] Applied default rotation ${defaultRotation}° to instance ${i}`);
@@ -483,14 +523,14 @@ export function applyDefaultLogoRotations(modelRoot) {
   }
 }
 
-export function resetLogoTextureRotation(modelRoot, instanceIndex) {
+export function resetLogoTextureRotation(modelRoot, instanceIndex, modelKey = null) {
   if (!modelRoot) return;
 
   // Pega a rotação padrão para a instância.
-  const defaultRotation = getDefaultRotation(instanceIndex);
-  
+  const defaultRotation = getDefaultRotation(instanceIndex, modelKey);
+
   // Usa a função principal para aplicar a rotação padrão.
   setLogoTextureRotation(modelRoot, instanceIndex, defaultRotation);
-  
+
   console.log(`[LOGOS] Instance ${instanceIndex} texture rotation reset to default: ${defaultRotation}°`);
 }

@@ -18,13 +18,8 @@
                 <div class="control">
                     <label>Modelo</label>
                     <div id="modelButtons" class="segmented-row model-grid">
-                        <button class="seg-btn" data-url="./assets/models/kosha4/teste7.glb" aria-pressed="false">Kosha4 teste 7 (GLB)</button>
-                        <button class="seg-btn" data-url="./assets/models/kosha4/teste10.glb" aria-pressed="false">Kosha4 teste 10 (GLB)</button>
-                        <button class="seg-btn" data-url="./assets/models/kosha4/teste11.glb" aria-pressed="false">Kosha4 teste 11 (GLB)</button>
-                        <button class="seg-btn" data-url="./assets/models/kosha4/teste12.glb" aria-pressed="false">Kosha4 teste 12 (GLB)</button>
-                        <button class="seg-btn" data-url="./assets/models/kosha4/teste13.glb" aria-pressed="false">Kosha4 teste 13 (GLB)</button>
-                        <button class="seg-btn active" data-url="./assets/models/kosha4/teste14.glb" aria-pressed="true">Kosha4 teste 14 (GLB)</button>
-                        <button class="seg-btn" data-url="./assets/models/kosha4/jetski6.glb" aria-pressed="false">Jetski 6 (GLB)</button>
+                        <button class="seg-btn active" data-url="./assets/models/kosha4/teste14.glb" aria-pressed="true">Sedan</button>
+                        <button class="seg-btn" data-url="./assets/models/kosha4/jetski6.glb" aria-pressed="false">Jetski</button>
                     </div>
                 </div>
             </section>
@@ -32,8 +27,8 @@
                 <div class="control">
                     <label>Cor das Linhas</label>
                     <div id="lineColorSwatches" class="swatch-row trio">
-                        <button class="swatch-btn active" data-hex="#666666" aria-pressed="true" aria-label="Preta" title="Preta" style="--swatch:#666666"></button>
-                        <button class="swatch-btn" data-hex="#4169E1" aria-pressed="false" aria-label="Azul royal" title="Azul royal" style="--swatch:#4169E1"></button>
+                        <button class="swatch-btn" data-hex="#666666" aria-pressed="false" aria-label="Preta" title="Preta" style="--swatch:#666666"></button>
+                        <button class="swatch-btn active" data-hex="#4169E1" aria-pressed="true" aria-label="Azul royal" title="Azul royal" style="--swatch:#4169E1"></button>
                         <button class="swatch-btn" data-hex="#849B88" aria-pressed="false" aria-label="Verde musgo" title="Verde musgo" style="--swatch:#849B88"></button>
                         <button class="swatch-btn" data-hex="#FF0000" aria-pressed="false" aria-label="Vermelho" title="Vermelho" style="--swatch:#FF0000"></button>
                         <button class="swatch-btn" data-hex="#5E63BC" aria-pressed="false" aria-label="Azul marinho" title="Azul marinho" style="--swatch:#5E63BC"></button>
@@ -63,19 +58,22 @@
                 <div class="control">
                     <label>Imagem por região</label>
                     <div class="logo-assignment-grid">
-                        <label class="logo-assignment-row"><span>Lateral - motorista</span><select class="logo-assignment-select" data-instance="0"></select></label>
-                        <label class="logo-assignment-row"><span>Lateral - passageiro</span><select class="logo-assignment-select" data-instance="1"></select></label>
-                        <label class="logo-assignment-row"><span>Traseira</span><select class="logo-assignment-select" data-instance="2"></select></label>
-                        <label class="logo-assignment-row"><span>Dianteira</span><select class="logo-assignment-select" data-instance="3"></select></label>
-                    </div>
-                </div>
-                <div class="control">
-                    <label>Exibir regiões da logo</label>
-                    <div class="logo-visibility-list">
-                        <label class="logo-visibility-item"><input id="logoUserInst0Visible" type="checkbox" checked /> Lateral - motorista</label>
-                        <label class="logo-visibility-item"><input id="logoUserInst1Visible" type="checkbox" checked /> Lateral - passageiro</label>
-                        <label class="logo-visibility-item"><input id="logoUserInst2Visible" type="checkbox" checked /> Traseira</label>
-                        <label class="logo-visibility-item"><input id="logoUserInst3Visible" type="checkbox" checked /> Dianteira</label>
+                        <div class="logo-assignment-item">
+                            <label class="logo-assignment-label">Lateral - motorista</label>
+                            <select class="logo-assignment-select" data-instance="0"></select>
+                        </div>
+                        <div class="logo-assignment-item">
+                            <label class="logo-assignment-label">Lateral - passageiro</label>
+                            <select class="logo-assignment-select" data-instance="1"></select>
+                        </div>
+                        <div class="logo-assignment-item">
+                            <label class="logo-assignment-label">Traseira</label>
+                            <select class="logo-assignment-select" data-instance="2"></select>
+                        </div>
+                        <div class="logo-assignment-item">
+                            <label class="logo-assignment-label">Dianteira</label>
+                            <select class="logo-assignment-select" data-instance="3"></select>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -83,45 +81,37 @@
 
         <div id="viewport" aria-label="Three.js viewport">
             <div id="adminOverlay" class="admin-overlay" aria-label="Controles administrativos">
-                <details class="admin-shell" open>
-                    <summary>Admin</summary>
+                <details class="admin-shell">
+                    <summary>Admin - Controles para debug</summary>
                     <div class="admin-content">
+                        <section class="admin-section" aria-labelledby="adminScenarioHeading">
+                            <div class="admin-section-header">
+                                <h2 id="adminScenarioHeading">Cenário</h2>
+                            </div>
+                            <div class="admin-subsection">
+                                <div id="scenarioButtons" class="scenario-grid">
+                                    <button class="seg-btn active" data-key="none" aria-pressed="true">Sem cenário</button>
+                                    <button class="seg-btn" data-key="modern_garage" aria-pressed="false">Galpão</button>
+                                    <button class="seg-btn" data-key="sci-fi_garage" aria-pressed="false">Show Room</button>
+                                    <button class="seg-btn" data-key="garageshowroom_vr_ready" aria-pressed="false">Garage Showroom (VR Ready)</button>
+                                    <button class="seg-btn" data-key="car-showroom_1" aria-pressed="false">Car Showroom 1</button>
+                                    <button class="seg-btn" data-key="car-showroom_2" aria-pressed="false">Car Showroom 2</button>
+                                    <button class="seg-btn" data-key="garage" aria-pressed="false">Garage</button>
+                                    <button class="seg-btn" data-key="hangar" aria-pressed="false">Hangar</button>
+                                    <button class="seg-btn" data-key="vr_gallery" aria-pressed="false">VR Gallery</button>
+                                    <button class="seg-btn" data-key="white-room1" aria-pressed="false">White Room</button>
+                                </div>
+                            </div>
+                        </section>
+
                         <section class="admin-section" aria-labelledby="adminCameraHeading">
                             <div class="admin-section-header">
                                 <h2 id="adminCameraHeading">Câmera</h2>
                                 <div class="admin-section-actions">
                                     <button id="toggleDofBtn" type="button">DOF</button>
+                                    <button id="adminRefocusBtn" type="button">Reposicionar câmera</button>
+                                    <button id="toggleAutoRotateBtn" type="button">Girar câmera</button>
                                 </div>
-                            </div>
-                            <div class="admin-subsection">
-                                <h3>Escolha o cenário</h3>
-                                <div id="scenarioButtons" class="segmented-row">
-                                    <button class="seg-btn active" data-key="none" aria-pressed="true">Sem cenário</button>
-                                    <button class="seg-btn" data-key="modern_garage" aria-pressed="false">Galpão</button>
-                                    <button class="seg-btn" data-key="sci-fi_garage" aria-pressed="false">Show Room</button>
-                                    <button class="seg-btn" data-key="garageshowroom_vr_ready" aria-pressed="false">Garage Showroom (VR Ready)</button>
-                                </div>
-                            </div>
-                            <div class="admin-subsection">
-                                <h3>Presets de câmera</h3>
-                                <label class="admin-field">
-                                    <span>Nome do preset</span>
-                                    <input id="camPresetNameInput" type="text" placeholder="Digite um nome" />
-                                </label>
-                                <label class="admin-field">
-                                    <span>Presets salvos</span>
-                                    <select id="camPresetSelect"></select>
-                                </label>
-                                <div class="admin-actions">
-                                    <button id="saveCamPresetBtn" type="button">Salvar</button>
-                                    <button id="loadCamPresetBtn" type="button">Carregar</button>
-                                    <button id="deleteCamPresetBtn" type="button">Excluir</button>
-                                </div>
-                                <div class="admin-actions">
-                                    <button id="exportCamPresetBtn" type="button">Exportar</button>
-                                    <button id="importCamPresetBtn" type="button">Importar</button>
-                                </div>
-                                <input id="importCamPresetFile" type="file" accept="application/json" style="display:none;" />
                             </div>
                         </section>
 
@@ -129,102 +119,192 @@
                             <div class="admin-section-header">
                                 <h2 id="adminLightsHeading">Luzes</h2>
                                 <div class="admin-section-actions">
-                                    <button id="copySelectedLightBtn" type="button">Copiar luz</button>
-                                    <button id="adminRefocusBtn" type="button">Reposicionar câmera</button>
+                                    <button id="toggleLightsControlsBtn" type="button">Mostrar controles</button>
                                 </div>
                             </div>
-                            <div id="lightsAdmin" class="admin-block"></div>
-                            <div class="admin-subsection">
-                                <h3>Presets de iluminação</h3>
-                                <label class="admin-field">
-                                    <span>Nome do preset</span>
-                                    <input id="presetNameInput" type="text" placeholder="Digite um nome" />
-                                </label>
-                                <label class="admin-field">
-                                    <span>Presets salvos</span>
-                                    <select id="presetSelect"></select>
-                                </label>
-                                <div class="admin-actions">
-                                    <button id="savePresetBtn" type="button">Salvar</button>
-                                    <button id="loadPresetBtn" type="button">Carregar</button>
-                                    <button id="deletePresetBtn" type="button">Excluir</button>
+                            <div id="lightsAdmin" class="admin-block" style="display:none"></div>
+                        </section>
+
+                        <section class="admin-section" aria-labelledby="adminLogosHeading">
+                            <div class="admin-section-header">
+                                <h2 id="adminLogosHeading">Logos</h2>
+                                <div class="admin-section-actions">
+                                    <button id="toggleLogosControlsBtn" type="button">Mostrar controles</button>
                                 </div>
-                                <div class="admin-actions">
-                                    <button id="exportPresetBtn" type="button">Exportar</button>
-                                    <button id="importPresetBtn" type="button">Importar</button>
-                                </div>
-                                <input id="importPresetFile" type="file" accept="application/json" style="display:none;" />
                             </div>
-                            <div class="admin-subsection">
-                                <div class="admin-subsection-header">
-                                    <h3>Logos Debug</h3>
-                                    <div class="admin-subsection-actions">
-                                        <button id="toggleLogosControlsBtn" type="button">Mostrar controles</button>
+                            <div id="logosControls" class="admin-block" style="display:none">
+                                <div class="logo-instance-group">
+                                    <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
+                                        <label><input id="logoInst0Visible" type="checkbox" checked /> lateral - motorista</label>
+                                        <span></span>
+                                        <button id="logoInst0RotCCW" type="button">↺ 180°</button>
+                                        <button id="logoInst0RotCW" type="button">↻ 180°</button>
+                                    </div>
+                                    <div class="rotation-sliders">
+                                        <div class="slider-row">
+                                            <label for="logoInst0Rot">Rotação:</label>
+                                            <input id="logoInst0Rot" type="range" min="-180" max="180" value="0" step="1" />
+                                            <span id="logoInst0RotValue">0°</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div id="logosControls" class="admin-block" style="display:none">
-                                    <div class="logo-instance-group">
-                                        <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
-                                            <label><input id="logoInst0Visible" type="checkbox" checked /> lateral - motorista</label>
-                                            <span></span>
-                                            <button id="logoInst0RotCCW" type="button">↺ 180°</button>
-                                            <button id="logoInst0RotCW" type="button">↻ 180°</button>
-                                        </div>
-                                        <div class="rotation-sliders">
-                                            <div class="slider-row">
-                                                <label for="logoInst0Rot">Rotação:</label>
-                                                <input id="logoInst0Rot" type="range" min="-180" max="180" value="0" step="1" />
-                                                <span id="logoInst0RotValue">0°</span>
-                                            </div>
+
+                                <div class="logo-instance-group">
+                                    <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
+                                        <label><input id="logoInst1Visible" type="checkbox" checked /> lateral - passageiro</label>
+                                        <span></span>
+                                        <button id="logoInst1RotCCW" type="button">↺ 180°</button>
+                                        <button id="logoInst1RotCW" type="button">↻ 180°</button>
+                                    </div>
+                                    <div class="rotation-sliders">
+                                        <div class="slider-row">
+                                            <label for="logoInst1Rot">Rotação:</label>
+                                            <input id="logoInst1Rot" type="range" min="-180" max="180" value="0" step="1" />
+                                            <span id="logoInst1RotValue">0°</span>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="logo-instance-group">
-                                        <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
-                                            <label><input id="logoInst1Visible" type="checkbox" checked /> lateral - passageiro</label>
-                                            <span></span>
-                                            <button id="logoInst1RotCCW" type="button">↺ 180°</button>
-                                            <button id="logoInst1RotCW" type="button">↻ 180°</button>
-                                        </div>
-                                        <div class="rotation-sliders">
-                                            <div class="slider-row">
-                                                <label for="logoInst1Rot">Rotação:</label>
-                                                <input id="logoInst1Rot" type="range" min="-180" max="180" value="0" step="1" />
-                                                <span id="logoInst1RotValue">0°</span>
-                                            </div>
+                                <div class="logo-instance-group">
+                                    <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
+                                        <label><input id="logoInst2Visible" type="checkbox" checked /> traseira</label>
+                                        <span></span>
+                                        <button id="logoInst2RotCCW" type="button">↺ 180°</button>
+                                        <button id="logoInst2RotCW" type="button">↻ 180°</button>
+                                    </div>
+                                    <div class="rotation-sliders">
+                                        <div class="slider-row">
+                                            <label for="logoInst2Rot">Rotação:</label>
+                                            <input id="logoInst2Rot" type="range" min="-180" max="180" value="0" step="1" />
+                                            <span id="logoInst2RotValue">0°</span>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div class="logo-instance-group">
-                                        <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
-                                            <label><input id="logoInst2Visible" type="checkbox" checked /> traseira</label>
-                                            <span></span>
-                                            <button id="logoInst2RotCCW" type="button">↺ 180°</button>
-                                            <button id="logoInst2RotCW" type="button">↻ 180°</button>
-                                        </div>
-                                        <div class="rotation-sliders">
-                                            <div class="slider-row">
-                                                <label for="logoInst2Rot">Rotação:</label>
-                                                <input id="logoInst2Rot" type="range" min="-180" max="180" value="0" step="1" />
-                                                <span id="logoInst2RotValue">0°</span>
-                                            </div>
+                                <div class="logo-instance-group">
+                                    <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
+                                        <label><input id="logoInst3Visible" type="checkbox" checked /> dianteira</label>
+                                        <span></span>
+                                        <button id="logoInst3RotCCW" type="button">↺ 180°</button>
+                                        <button id="logoInst3RotCW" type="button">↻ 180°</button>
+                                    </div>
+                                    <div class="rotation-sliders">
+                                        <div class="slider-row">
+                                            <label for="logoInst3Rot">Rotação:</label>
+                                            <input id="logoInst3Rot" type="range" min="-180" max="180" value="0" step="1" />
+                                            <span id="logoInst3RotValue">0°</span>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </section>
 
-                                    <div class="logo-instance-group">
-                                        <div class="row" style="grid-template-columns:auto 1fr auto auto auto; gap:8px; margin-bottom: 8px;">
-                                            <label><input id="logoInst3Visible" type="checkbox" checked /> dianteira</label>
-                                            <span></span>
-                                            <button id="logoInst3RotCCW" type="button">↺ 180°</button>
-                                            <button id="logoInst3RotCW" type="button">↻ 180°</button>
+                        <section class="admin-section" aria-labelledby="adminHdrHeading">
+                            <div class="admin-section-header">
+                                <h2 id="adminHdrHeading">HDR Environment</h2>
+                                <div class="admin-section-actions">
+                                    <button id="toggleHdrControlsBtn" type="button">Mostrar controles</button>
+                                </div>
+                            </div>
+                            <div id="hdrControls" class="admin-block" style="display:none">
+                                <div class="control-group">
+                                    <div class="control">
+                                        <label for="hdrSelect">Imagem HDR</label>
+                                        <select id="hdrSelect" class="hdr-select">
+                                            <option value="none">Nenhum</option>
+                                            <option value="studio.hdr">Studio HDR</option>
+                                            <option value="street.hdr">Street HDR</option>
+                                            <option value="hangar.hdr">Hangar HDR</option>
+                                            <option value="office.hdr">Office HDR</option>
+                                            <option value="dancehall.hdr">Dance Hall HDR</option>
+                                            <option value="brwnstudio.hdr">Brown Studio HDR</option>
+                                            <option value="satara.hdr">Satara HDR</option>
+                                            <option value="plh.hdr">PLH HDR</option>
+                                            <option value="zw.hdr">ZW HDR</option>
+                                            <option value="scythian_tombs_2_4k.hdr">Scythian Tombs HDR</option>
+                                            <option value="venice_sunset_4k.hdr">Venice Sunset HDR</option>
+                                            <option value="moonless_golf_4k.hdr">Moonless Golf HDR</option>
+                                            <option value="msichll.hdr">MSIC HLL HDR</option>
+                                            <option value="empty_warehouse_01_4k.hdr">Empty Warehouse HDR</option>
+                                            <option value="old_bus_depot_4k.hdr">Old Bus Depot HDR</option>
+                                            <option value="subway_entrance_4k.hdr">Subway Entrance HDR</option>
+                                        </select>
+                                    </div>
+                                    <div class="control">
+                                        <label for="toneMappingExposure">Exposição</label>
+                                        <div class="slider-row">
+                                            <input id="toneMappingExposure" type="range" min="0.1" max="3.0" value="1.0" step="0.1" />
+                                            <span id="toneMappingExposureValue">1.0</span>
                                         </div>
-                                        <div class="rotation-sliders">
-                                            <div class="slider-row">
-                                                <label for="logoInst3Rot">Rotação:</label>
-                                                <input id="logoInst3Rot" type="range" min="-180" max="180" value="0" step="1" />
-                                                <span id="logoInst3RotValue">0°</span>
-                                            </div>
+                                    </div>
+                                    <div class="control">
+                                        <label>Modo Background</label>
+                                        <div class="toggle-group">
+                                            <label class="toggle-item">
+                                                <input id="hdrBackgroundEnabled" type="checkbox" checked />
+                                                <span>HDR como Background 360</span>
+                                            </label>
                                         </div>
+                                        <p class="control-help">Ative para usar HDR como background ou desative para usar apenas iluminação</p>
+                                    </div>
+                                    <div class="control">
+                                        <label for="environmentIntensity">Intensidade do Environment</label>
+                                        <div class="slider-row">
+                                            <input id="environmentIntensity" type="range" min="0.1" max="3.0" value="1.0" step="0.1" />
+                                            <span id="environmentIntensityValue">1.0</span>
+                                        </div>
+                                        <p class="control-help">Controla a intensidade das reflexões e iluminação do environment map</p>
+                                    </div>
+                                    <div class="control">
+                                        <label for="toneMappingSelect">Modo de Tone Mapping</label>
+                                        <select id="toneMappingSelect" class="hdr-select">
+                                            <option value="ACESFilmicToneMapping">ACES Filmic (Padrão)</option>
+                                            <option value="LinearToneMapping">Linear</option>
+                                            <option value="ReinhardToneMapping">Reinhard</option>
+                                            <option value="CineonToneMapping">Cineon</option>
+                                            <option value="Uncharted2ToneMapping">Uncharted2</option>
+                                        </select>
+                                        <p class="control-help">Altera o método de mapeamento de tons para diferentes estilos visuais</p>
+                                    </div>
+                                    <div class="control">
+                                        <label for="hdrBackgroundPositionX">Posição X do HDR Background</label>
+                                        <div class="slider-row">
+                                            <input id="hdrBackgroundPositionX" type="range" min="-20.0" max="20.0" value="0.0" step="0.5" />
+                                            <span id="hdrBackgroundPositionXValue">0.0</span>
+                                        </div>
+                                        <p class="control-help">Ajusta a posição horizontal do HDR background</p>
+                                    </div>
+                                    <div class="control">
+                                        <label for="hdrBackgroundPositionY">Posição Y do HDR Background</label>
+                                        <div class="slider-row">
+                                            <input id="hdrBackgroundPositionY" type="range" min="-20.0" max="20.0" value="0.0" step="0.5" />
+                                            <span id="hdrBackgroundPositionYValue">0.0</span>
+                                        </div>
+                                        <p class="control-help">Ajusta a posição vertical do HDR background</p>
+                                    </div>
+                                    <div class="control">
+                                        <label for="hdrBackgroundPositionZ">Posição Z do HDR Background</label>
+                                        <div class="slider-row">
+                                            <input id="hdrBackgroundPositionZ" type="range" min="-20.0" max="20.0" value="0.0" step="0.5" />
+                                            <span id="hdrBackgroundPositionZValue">0.0</span>
+                                        </div>
+                                        <p class="control-help">Ajusta a posição em profundidade do HDR background</p>
+                                    </div>
+                                    <div class="control">
+                                        <label for="hdrBackgroundRotation">Rotação do HDR Background</label>
+                                        <div class="slider-row">
+                                            <input id="hdrBackgroundRotation" type="range" min="-180" max="180" value="0" step="1" />
+                                            <span id="hdrBackgroundRotationValue">0°</span>
+                                        </div>
+                                        <p class="control-help">Ajusta a rotação do HDR background (em graus)</p>
+                                    </div>
+                                    <div class="control">
+                                        <label for="hdrBackgroundScale">Scale do HDR Background</label>
+                                        <div class="slider-row">
+                                            <input id="hdrBackgroundScale" type="range" min="0.1" max="3.0" value="1.0" step="0.1" />
+                                            <span id="hdrBackgroundScaleValue">1.0</span>
+                                        </div>
+                                        <p class="control-help">Ajusta o tamanho/scale do HDR background</p>
                                     </div>
                                 </div>
                             </div>

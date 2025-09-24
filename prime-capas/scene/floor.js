@@ -66,7 +66,9 @@ export function snapModelToScenarioFloor(modelRoot, scenarioKey, scenarioRoot, c
   const raycaster = new THREE.Raycaster();
   let rayOrigin;
   let rayDirection;
-  if (scenarioKey === 'sci-fi_garage' || scenarioKey === 'garageshowroom_vr_ready' || scenarioKey === 'vr_moody_lighting_art_gallery_scene_06') {
+  if (scenarioKey === 'sci-fi_garage' || scenarioKey === 'garageshowroom_vr_ready' || scenarioKey === 'vr_moody_lighting_art_gallery_scene_06' ||
+      scenarioKey === 'car-showroom_1' || scenarioKey === 'car-showroom_2' || scenarioKey === 'garage' ||
+      scenarioKey === 'hangar' || scenarioKey === 'vr_gallery' || scenarioKey === 'white-room1') {
     rayOrigin = new THREE.Vector3(center.x, box.min.y - 0.01, center.z);
     rayDirection = new THREE.Vector3(0, -1, 0);
   } else {
@@ -76,7 +78,9 @@ export function snapModelToScenarioFloor(modelRoot, scenarioKey, scenarioRoot, c
   raycaster.set(rayOrigin, rayDirection);
 
   const candidates = [];
-  if ((scenarioKey === 'sci-fi_garage' || scenarioKey === 'garageshowroom_vr_ready' || scenarioKey === 'vr_moody_lighting_art_gallery_scene_06') && scenarioRoot) {
+  if ((scenarioKey === 'sci-fi_garage' || scenarioKey === 'garageshowroom_vr_ready' || scenarioKey === 'vr_moody_lighting_art_gallery_scene_06' ||
+       scenarioKey === 'car-showroom_1' || scenarioKey === 'car-showroom_2' || scenarioKey === 'garage' ||
+       scenarioKey === 'hangar' || scenarioKey === 'vr_gallery' || scenarioKey === 'white-room1') && scenarioRoot) {
     candidates.push(scenarioRoot);
   } else if (currentFloorMesh && currentFloorMesh.visible) {
     candidates.push(currentFloorMesh);
@@ -86,7 +90,9 @@ export function snapModelToScenarioFloor(modelRoot, scenarioKey, scenarioRoot, c
   const intersections = raycaster.intersectObjects(candidates, true);
   if (!intersections.length) return { modelYOffsetBase: 0 };
   let hit = intersections[0];
-  if (scenarioKey === 'sci-fi_garage' || scenarioKey === 'garageshowroom_vr_ready' || scenarioKey === 'vr_moody_lighting_art_gallery_scene_06') {
+  if (scenarioKey === 'sci-fi_garage' || scenarioKey === 'garageshowroom_vr_ready' || scenarioKey === 'vr_moody_lighting_art_gallery_scene_06' ||
+      scenarioKey === 'car-showroom_1' || scenarioKey === 'car-showroom_2' || scenarioKey === 'garage' ||
+      scenarioKey === 'hangar' || scenarioKey === 'vr_gallery' || scenarioKey === 'white-room1') {
     for (const i of intersections) {
       const below = i.point.y <= box.min.y + 0.05;
       const face = i.face;
@@ -101,7 +107,9 @@ export function snapModelToScenarioFloor(modelRoot, scenarioKey, scenarioRoot, c
     }
   }
   let targetY = hit.point.y;
-  if (scenarioKey === 'sci-fi_garage' || scenarioKey === 'garageshowroom_vr_ready' || scenarioKey === 'vr_moody_lighting_art_gallery_scene_06') targetY += 0.008;
+  if (scenarioKey === 'sci-fi_garage' || scenarioKey === 'garageshowroom_vr_ready' || scenarioKey === 'vr_moody_lighting_art_gallery_scene_06' ||
+      scenarioKey === 'car-showroom_1' || scenarioKey === 'car-showroom_2' || scenarioKey === 'garage' ||
+      scenarioKey === 'hangar' || scenarioKey === 'vr_gallery' || scenarioKey === 'white-room1') targetY += 0.008;
 
   const epsilon = 0.0005;
   const bottomY = box.min.y;

@@ -20,6 +20,13 @@ export function createScenarioManager(scene) {
     'sci-fi_garage': './assets/scenarios/sci-fi_garage/sci-fi_garage.glb',
     // Garage showroom VR ready (GLB)
     'garageshowroom_vr_ready': './assets/scenarios/garageshowroom_vr_ready/garageshowroom_vr_ready.glb',
+    // New GLB scenarios
+    'car-showroom_1': './assets/scenarios/car-showroom_1.glb',
+    'car-showroom_2': './assets/scenarios/car-showroom_2.glb',
+    'garage': './assets/scenarios/garage.glb',
+    'hangar': './assets/scenarios/hangar.glb',
+    'vr_gallery': './assets/scenarios/vr_gallery.glb',
+    'white-room1': './assets/scenarios/white-room1.glb',
   };
 
   function disposeScenario() {
@@ -55,8 +62,35 @@ export function createScenarioManager(scene) {
     loader.load(
       url,
       (gltf) => {
+        console.log(`[scenario] GLTF loaded successfully for ${key}:`, gltf);
+        console.log(`[scenario] GLTF animations:`, gltf.animations);
+        console.log(`[scenario] GLTF scenes:`, gltf.scenes);
+        console.log(`[scenario] GLTF scene:`, gltf.scene);
+
         const root = gltf.scene || gltf.scenes[0];
-        if (!root) return;
+        if (!root) {
+          console.error(`[scenario] No root scene found in ${key}`);
+          return;
+        }
+
+        console.log(`[scenario] Root scene for ${key}:`, root);
+        console.log(`[scenario] Root animations for ${key}:`, root.animations);
+        console.log(`[scenario] Root type:`, root.type);
+
+        // Check all objects in the scene for animations
+        const objectsWithAnimations = [];
+        root.traverse((child) => {
+          console.log(`[scenario] Object in ${key}: ${child.name || child.type}`, {
+            animations: child.animations,
+            type: child.type
+          });
+          if (child.animations && child.animations.length > 0) {
+            objectsWithAnimations.push(child);
+          }
+        });
+
+        console.log(`[scenario] Objects with animations in ${key}:`, objectsWithAnimations);
+
         scenarioRoot = new THREE.Group();
         scenarioRoot.add(root);
         scene.add(scenarioRoot);
