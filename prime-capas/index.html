@@ -326,10 +326,39 @@
     <script type="importmap">
     {
       "imports": {
-        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        "three": "./three.module.js",
+        "three/addons/": "./three-addons/"
       }
     }
+    </script>
+
+    <!-- Fallback script for Three.js files -->
+    <script>
+      // Check if local Three.js files exist, otherwise use CDN
+      async function checkThreeFiles() {
+        try {
+          const response = await fetch('./three.module.js');
+          if (!response.ok) throw new Error('Local Three.js not found');
+        } catch (error) {
+          console.log('Local Three.js files not found, using CDN...');
+          // Update import map to use CDN
+          const importMap = document.querySelector('script[type="importmap"]');
+          if (importMap) {
+            const script = importMap.textContent;
+            const updatedScript = script.replace(
+              /"\.\/three\.module\.js"/g,
+              '"https://unpkg.com/three@0.160.0/build/three.module.js"'
+            ).replace(
+              /"\.\/three-addons\/"/g,
+              '"https://unpkg.com/three@0.160.0/examples/jsm/"'
+            );
+            importMap.textContent = updatedScript;
+          }
+        }
+      }
+
+      // Run check on page load
+      checkThreeFiles();
     </script>
 
     <!-- App as ES module -->

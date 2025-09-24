@@ -1,0 +1,21 @@
+{
+  "name": "prime-capas-showcase",
+  "version": "1.0.0",
+  "description": "Three.js showcase for vehicle covers with realistic HDR lighting",
+  "main": "main.js",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "build": "echo 'No build step required for vanilla JS project'"
+  },
+  "keywords": ["three.js", "webgl", "3d", "showcase", "hdr", "lighting"],
+  "author": "Clayton Borges",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/claytonbrgsdev/prime-capas-showcase.git"
+  },
+  "bugs": {
+    "url": "https://github.com/claytonbrgsdev/prime-capas-showcase/issues"
+  },
+  "homepage": "https://claytonbrgsdev.github.io/prime-capas-showcase/"
+}
