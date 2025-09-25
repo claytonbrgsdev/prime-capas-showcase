@@ -2582,7 +2582,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
             updateHDRSelectUI();
           }
         };
-        img.src = `./prime-capas/assets/images/${hdrFilename}`;
+        img.src = `./assets/images/${hdrFilename}`;
       } else {
         loadedCount++;
         if (loadedCount === totalCount) {
@@ -2647,7 +2647,7 @@ import { applyLogoRegionsFromUI as applyLogoRegionsFromUIExt, getAllMaterialName
         tryLoadHDR(commonHDRNames[nextIndex]);
       };
 
-      img.src = `./prime-capas/assets/images/${filename}`;
+      img.src = `./assets/images/${filename}`;
     }
 
     // Começar com um nome aleatório
